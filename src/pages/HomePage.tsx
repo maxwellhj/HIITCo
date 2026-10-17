@@ -1,4 +1,11 @@
-import { ArrowRight, Check, Flame, Target, Trophy } from "lucide-react";
+import {
+  ArrowRight,
+  CalendarDays,
+  Check,
+  Flame,
+  Target,
+  Trophy,
+} from "lucide-react";
 import { Card } from "../components/UI";
 import { attendanceStats, formatDate, shiftDate } from "../domain/attendance";
 import type { DemoData, MemberProfile } from "../domain/models";
@@ -103,6 +110,15 @@ export function HomePage({
           </p>
         </Card>
       </div>
+      <Card className="club-events">
+        <h2>
+          <CalendarDays size={18} /> Upcoming club events
+        </h2>
+        <p>
+          No upcoming events just yet. Check back here for what’s happening at
+          HIIT Co.
+        </p>
+      </Card>
       <div className="home-details">
         <p>
           Last club visit:{" "}

@@ -218,7 +218,7 @@ function App() {
                 <div className="eyebrow">
                   <span />
                   {page === "home"
-                    ? "LET’S MAKE IT A GOOD WEEK"
+                    ? "Progress over perfection"
                     : page === "progress"
                       ? "EVERY VISIT ADDS UP"
                       : page === "workouts"
@@ -228,9 +228,7 @@ function App() {
                 <div className="heading-line">
                   <h1>
                     {page === "home" ? (
-                      <>
-                        Hey, {member.firstName}
-                      </>
+                      <>Hey, {member.firstName}</>
                     ) : page === "progress" ? (
                       "Look how far you’ve come."
                     ) : page === "workouts" ? (

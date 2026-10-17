@@ -1612,3 +1612,29 @@ td > svg {
     font-size: 10px;
   }
 }
+
+.club-events {
+  margin-top: 16px;
+}
+.club-events h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 15px;
+}
+.club-events h2 svg {
+  color: #606d77;
+}
+.club-events p {
+  margin-top: 12px;
+  font-size: 12px;
+}
+@media (max-width: 760px) {
+  .club-events {
+    margin-top: 12px;
+    padding: 20px;
+  }
+  .club-events h2 {
+    font-size: 14px;
+  }
+}
