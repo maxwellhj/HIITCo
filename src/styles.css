@@ -129,24 +129,12 @@ svg {
   z-index: 20;
 }
 .brand {
-  font-size: 37px;
-  font-weight: 950;
-  letter-spacing: -2px;
-  line-height: 1;
-  display: flex;
-  align-items: baseline;
-}
-.brand span {
-  font-size: 28px;
-  letter-spacing: -1.5px;
-  margin-left: 3px;
-}
-.brand i {
-  width: 7px;
-  height: 7px;
-  background: var(--blue);
-  border-radius: 50%;
-  margin-left: 6px;
+  display: block;
+  width: 166px;
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 937 / 262;
+  overflow: hidden;
 }
 .brand-link {
   display: block;
@@ -1134,14 +1122,11 @@ td > svg {
     display: block;
   }
   .brand {
-    font-size: 29px;
+    width: 124px;
   }
-  .brand span {
-    font-size: 22px;
-  }
-  .brand i {
-    width: 5px;
-    height: 5px;
+  .mobile-brand {
+    min-height: 44px;
+    align-content: center;
   }
   .top-actions {
     gap: 12px;

@@ -8,7 +8,7 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "prompt",
-      includeAssets: ["icon.svg"],
+      includeAssets: ["icon.svg", "hiit-co-logo.png"],
       manifest: {
         name: "HIIT Co. Member App",
         short_name: "HIIT Co.",
