@@ -3,7 +3,6 @@ import {
   ArrowDownToLine,
   Bell,
   ChevronRight,
-  Dumbbell,
   Home,
   LayoutDashboard,
   MessageCircle,
@@ -21,16 +20,17 @@ import { containDialog } from "./components/dialog";
 import { HomePage } from "./pages/HomePage";
 import { Progress } from "./pages/Progress";
 import { Staff } from "./pages/Staff";
-import { Workouts } from "./pages/Workouts";
+import { Skills } from "./pages/Skills";
+import { BoxingGloves } from "./components/BoxingGloves";
 import { Messages } from "./pages/Messages";
-type Page = "home" | "workouts" | "progress" | "messages" | "staff";
+type Page = "home" | "skills" | "progress" | "messages" | "staff";
 type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
 };
 const pages = [
   { id: "home", label: "Home", icon: Home },
-  { id: "workouts", label: "Workouts", icon: Dumbbell },
+  { id: "skills", label: "Skills", icon: BoxingGloves },
   { id: "progress", label: "Progress", icon: TrendingUp },
   { id: "messages", label: "Messages", icon: MessageCircle },
 ] as const;
@@ -43,8 +43,9 @@ function App() {
     [install, setInstall] = useState<InstallPrompt | null>(null),
     [showInstall, setShowInstall] = useState(false);
   function getPage(): Page {
-    const route = window.location.hash.slice(1);
-    return ["home", "workouts", "progress", "messages", "staff"].includes(route)
+    const hash = window.location.hash.slice(1);
+    const route = hash === "workouts" ? "skills" : hash;
+    return ["home", "skills", "progress", "messages", "staff"].includes(route)
       ? (route as Page)
       : "home";
   }
@@ -221,8 +222,8 @@ function App() {
                     ? "Progress over perfection"
                     : page === "progress"
                       ? "EVERY VISIT ADDS UP"
-                      : page === "workouts"
-                        ? "TRAIN WITH PURPOSE"
+                      : page === "skills"
+                        ? "LEARN. PRACTISE. PROGRESS."
                         : "YOUR CLUB CONNECTION"}
                 </div>
                 <div className="heading-line">
@@ -231,8 +232,8 @@ function App() {
                       <>Hey, {member.firstName}</>
                     ) : page === "progress" ? (
                       "Look how far you’ve come."
-                    ) : page === "workouts" ? (
-                      "A little sweat. A lot stronger."
+                    ) : page === "skills" ? (
+                      "Build your skills."
                     ) : (
                       "In your corner."
                     )}
@@ -250,8 +251,8 @@ function App() {
                     ? "Your week, at a glance."
                     : page === "progress"
                       ? "Consistency looks good on you. Here’s your training story so far."
-                      : page === "workouts"
-                        ? "Strength, boxing and HIIT. Thirty minutes that make a difference."
+                      : page === "skills"
+                        ? "Technique tips and how-to videos, all in one place."
                         : "Updates, encouragement and good things from the HIIT Co. team."}
                 </p>
               </div>
@@ -259,8 +260,8 @@ function App() {
                 <HomePage member={member} data={data} />
               ) : page === "progress" ? (
                 <Progress member={member} data={data} />
-              ) : page === "workouts" ? (
-                <Workouts />
+              ) : page === "skills" ? (
+                <Skills />
               ) : (
                 <Messages />
               )}

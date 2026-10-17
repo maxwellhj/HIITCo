@@ -1638,3 +1638,49 @@ td > svg {
     font-size: 14px;
   }
 }
+
+.skills-library {
+  max-width: 680px;
+  margin-inline: auto;
+  padding: 35px 25px;
+  text-align: center;
+}
+.skills-preview {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 160px;
+  max-width: 300px;
+  margin: 0 auto 25px;
+  border-radius: 12px;
+  background: #eff4f8;
+  color: #62788a;
+}
+.skills-play {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  background: #fff;
+  color: #525b63;
+}
+.skills-library h2 {
+  font-size: 21px;
+}
+.skills-library p {
+  max-width: 430px;
+  margin: 14px auto 0;
+}
+.skills-topics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 22px 0;
+}
