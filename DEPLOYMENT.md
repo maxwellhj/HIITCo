@@ -1,5 +1,20 @@
 # Put the demo online with Cloudflare Pages
 
+## Recommended: connect GitHub
+
+The app is available in `maxwellhj/HIITCo` on branch `main`. In Cloudflare, open Workers & Pages, create a **Pages** project and choose the option to import/connect a Git repository. Authorize the HIITCo repository and select it. Use:
+
+- Production branch: `main`
+- Framework preset: Vite (or None if unavailable)
+- Build command: `npm run build`
+- Build output directory: `dist`
+- Root directory: leave blank
+
+Save and deploy. Cloudflare provides an HTTPS `pages.dev` URL. This app requires no API credentials. Future pushes to `main` automatically rebuild the site. The `.node-version` file selects Node 24 for compatible build environments.
+
+## Alternative: direct upload
+
+
 The app is a static website. A Pages Direct Upload project needs no GitHub connection, API keys, build settings or server. This demo contains fictional data and an openly accessible staff demonstration.
 
 1. Sign in at https://dash.cloudflare.com/ (create an account if needed).
