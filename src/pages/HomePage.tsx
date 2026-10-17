@@ -6,6 +6,9 @@ import {
   Target,
   Trophy,
 } from "lucide-react";
+import { BoxingGlove } from "../components/BoxingGlove";
+import { clubEvents, eventsAreDemo } from "../data/events";
+import { upcomingEvents } from "../domain/events";
 import { Card } from "../components/UI";
 import { attendanceStats, formatDate, shiftDate } from "../domain/attendance";
 import type { DemoData, MemberProfile } from "../domain/models";
@@ -19,6 +22,7 @@ export function HomePage({
 }) {
   const s = attendanceStats(member, data.attendance);
   const remaining = Math.max(0, member.weeklyTarget - s.completed);
+  const nextEvent = upcomingEvents(clubEvents, s.today)[0];
   return (
     <div className="home-overview">
       <Card className="weekly-goal">
@@ -110,14 +114,34 @@ export function HomePage({
           </p>
         </Card>
       </div>
+      <a className="home-library-button" href="#skills">
+        <BoxingGlove size={25} />
+        <span>
+          Skills Library<small>Box · Lift · Sweat</small>
+        </span>
+        <ArrowRight size={18} />
+      </a>
       <Card className="club-events">
         <h2>
           <CalendarDays size={18} /> Upcoming club events
         </h2>
-        <p>
-          No upcoming events just yet. Check back here for what’s happening at
-          HIIT Co.
-        </p>
+        {nextEvent ? (
+          <a className="home-next-event" href="#events">
+            <span>
+              <strong>{nextEvent.title}</strong>
+              <small>
+                {formatDate(nextEvent.date)} · {nextEvent.time}
+                {eventsAreDemo ? " · Demo event" : ""}
+              </small>
+            </span>
+            <ArrowRight size={17} />
+          </a>
+        ) : (
+          <p>No upcoming events just yet.</p>
+        )}
+        <a className="text-button" href="#events">
+          View calendar <ArrowRight size={15} />
+        </a>
       </Card>
       <div className="home-details">
         <p>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   ArrowDownToLine,
   Bell,
+  CalendarDays,
   ChevronRight,
   Home,
   LayoutDashboard,
@@ -21,16 +22,16 @@ import { HomePage } from "./pages/HomePage";
 import { Progress } from "./pages/Progress";
 import { Staff } from "./pages/Staff";
 import { Skills } from "./pages/Skills";
-import { BoxingGlove } from "./components/BoxingGlove";
+import { Events } from "./pages/Events";
 import { Messages } from "./pages/Messages";
-type Page = "home" | "skills" | "progress" | "messages" | "staff";
+type Page = "home" | "skills" | "events" | "progress" | "messages" | "staff";
 type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
 };
 const pages = [
   { id: "home", label: "Home", icon: Home },
-  { id: "skills", label: "Skills", icon: BoxingGlove },
+  { id: "events", label: "EVENTS", icon: CalendarDays },
   { id: "progress", label: "Progress", icon: TrendingUp },
   { id: "messages", label: "Messages", icon: MessageCircle },
 ] as const;
@@ -45,7 +46,14 @@ function App() {
   function getPage(): Page {
     const hash = window.location.hash.slice(1);
     const route = hash === "workouts" ? "skills" : hash;
-    return ["home", "skills", "progress", "messages", "staff"].includes(route)
+    return [
+      "home",
+      "skills",
+      "events",
+      "progress",
+      "messages",
+      "staff",
+    ].includes(route)
       ? (route as Page)
       : "home";
   }
@@ -219,12 +227,14 @@ function App() {
                 <div className="eyebrow">
                   <span />
                   {page === "home"
-                    ? "Progress over perfection"
+                    ? "PROGRESS OVER PERFECTION."
                     : page === "progress"
                       ? "EVERY VISIT ADDS UP"
                       : page === "skills"
                         ? "LEARN. PRACTISE. PROGRESS."
-                        : "YOUR CLUB CONNECTION"}
+                        : page === "events"
+                          ? "YOUR CLUB CALENDAR"
+                          : "YOUR CLUB CONNECTION"}
                 </div>
                 <div className="heading-line">
                   <h1>
@@ -233,7 +243,9 @@ function App() {
                     ) : page === "progress" ? (
                       "Look how far you’ve come."
                     ) : page === "skills" ? (
-                      "Build your skills."
+                      "Skills Library"
+                    ) : page === "events" ? (
+                      "What’s on at HIIT Co."
                     ) : (
                       "In your corner."
                     )}
@@ -253,7 +265,9 @@ function App() {
                       ? "Consistency looks good on you. Here’s your training story so far."
                       : page === "skills"
                         ? "Technique tips and how-to videos, all in one place."
-                        : "Updates, encouragement and good things from the HIIT Co. team."}
+                        : page === "events"
+                          ? "Explore upcoming events and tap a date for the details."
+                          : "Updates, encouragement and good things from the HIIT Co. team."}
                 </p>
               </div>
               {page === "home" ? (
@@ -262,6 +276,8 @@ function App() {
                 <Progress member={member} data={data} />
               ) : page === "skills" ? (
                 <Skills />
+              ) : page === "events" ? (
+                <Events />
               ) : (
                 <Messages />
               )}
