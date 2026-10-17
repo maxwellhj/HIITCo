@@ -18,13 +18,9 @@ export function BoxingGlove({
       aria-hidden="true"
       {...props}
     >
-      {/* The thumb sits on the viewer’s left for a right-hand glove. */}
-      <path d="M8 17.5c-2.4-1-4.6-3.6-5-6-.3-1.5.3-2.7 1.6-2.9 1.1-.2 2 .5 2.9 1.8V6.5C7.5 3.9 9.6 2 12.3 2H16c3 0 5 2 5 5v3.5c0 3.3-1.6 5.7-4 7" />
-      {/* Broad padded knuckles and the stitched, curled-in thumb. */}
-      <path d="M11 7.5c2.8-.8 6.3-.7 9.8.3M7.5 10.4l1.3 2c.8 1.2.5 2.5-.6 3.2" />
-      {/* Wide wrist strap makes the silhouette read as a boxing glove. */}
-      <rect x="7.5" y="17.5" width="10" height="4.5" rx="1" />
-      <path d="M10 19.8h5" />
+      {/* One continuous silhouette: padded fist, left-side thumb, longer wrist. */}
+      <path d="M8 15c-2.5-1-4.5-3.4-4.5-5.5C3.5 8 4.3 7 5.5 7c.9 0 1.7.6 2.5 1.6V6c0-2.5 1.8-4 4.5-4H15c3 0 5 1.8 5 4.5V9c0 2.7-1.3 4.6-3.5 6v6.5c0 .6-.4 1-1 1H9c-.6 0-1-.4-1-1Z" />
+      <path d="m8 8.6 1.3 1.8c.7 1 .5 2-.3 2.8M8 17h8.5M11 20h2.5" />
     </svg>
   );
 }
