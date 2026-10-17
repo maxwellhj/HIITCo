@@ -380,82 +380,6 @@ main {
   padding: 5px 8px;
   white-space: nowrap;
 }
-.progress-ring {
-  height: 154px;
-  width: 154px;
-  padding: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  transform: rotate(-0deg);
-}
-.progress-ring > div {
-  border-radius: 50%;
-  width: 100%;
-  height: 100%;
-  background: #ffffff;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.progress-ring strong {
-  font-size: 43px;
-  font-weight: 650;
-  letter-spacing: -2px;
-}
-.progress-ring strong span {
-  font-size: 22px;
-  color: #5c6269;
-  letter-spacing: -1px;
-  font-weight: 400;
-}
-.progress-ring small {
-  color: #5c6269;
-  font-size: 8px;
-  letter-spacing: 1.6px;
-  margin-top: 1px;
-}
-.week-days {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  min-height: 80px;
-}
-.week-days > div {
-  display: flex;
-  align-items: center;
-  flex-direction: column;
-  font-size: 10px;
-  position: relative;
-  color: #5c6269;
-}
-.week-days > div > span {
-  margin-bottom: 9px;
-}
-.week-days > div > div {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  color: #5c6269;
-  background: #f5f6f7;
-}
-.week-days > .attended > div {
-  background: var(--blue);
-  color: #5c6269;
-}
-.week-days > .today > div {
-  outline: 1px solid var(--blue);
-  outline-offset: 3px;
-}
-.week-days small {
-  font-size: 7px;
-  color: var(--accent-ink);
-  margin-top: 7px;
-}
 .card-bottom {
   border-top: 1px solid #e0e4e7;
   margin-top: 8px;
@@ -1038,10 +962,6 @@ td > svg {
   .page-footer {
     padding: 22px 26px;
   }
-  .progress-ring {
-    width: 130px;
-    height: 130px;
-  }
   .card {
     padding: 20px;
   }
@@ -1080,10 +1000,6 @@ td > svg {
   }
   .club-label {
     font-size: 8px;
-  }
-  .progress-ring {
-    width: 154px;
-    height: 154px;
   }
   .section-top h2 {
     font-size: 16px;
@@ -1175,18 +1091,6 @@ td > svg {
   }
   .section-top h2 {
     font-size: 15px;
-  }
-  .progress-ring {
-    width: 143px;
-    height: 143px;
-  }
-  .week-days {
-    gap: 6px;
-    min-height: 81px;
-  }
-  .week-days > div > div {
-    height: 32px;
-    width: 32px;
   }
   .card-bottom {
     font-size: 8px;
@@ -1373,10 +1277,6 @@ td > svg {
   .card {
     padding: 18px;
   }
-  .progress-ring {
-    width: 128px;
-    height: 128px;
-  }
   .demo-badge {
     display: none;
   }
@@ -1398,95 +1298,10 @@ td > svg {
   position: relative;
 }
 
-/* The member home keeps the weekly ring and two compact supporting stats. */
+/* Compact member home overview. */
 .home-overview {
   max-width: 680px;
   margin-inline: auto;
-}
-.weekly-goal {
-  padding: 26px 32px;
-}
-.goal-focus {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 28px 0 30px;
-}
-.goal-focus .progress-ring {
-  width: 190px;
-  height: 190px;
-  padding: 12px;
-}
-.goal-focus .progress-ring strong {
-  font-size: 49px;
-  color: #17191c;
-}
-.goal-focus .progress-ring > div {
-  background: #fff;
-}
-.goal-message {
-  font-size: 14px;
-  color: #52575e;
-  text-align: center;
-}
-.weekly-goal .week-days {
-  max-width: 440px;
-  margin-inline: auto;
-}
-.week-days > .attended > div {
-  color: #17232c;
-}
-.week-days > .today > div {
-  outline-color: #71899c;
-}
-.week-days small {
-  color: #515961;
-}
-.home-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 16px;
-}
-.summary-card {
-  padding: 21px 23px;
-  min-width: 0;
-}
-.summary-card h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #5c6269;
-  font-weight: 500;
-}
-.summary-card h2 svg {
-  color: #606d77;
-}
-.summary-value {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 34px;
-  font-weight: 650;
-  letter-spacing: -1px;
-  margin: 12px 0 7px;
-  line-height: 1.25;
-}
-.summary-value span {
-  font-size: 12px;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: #63676d;
-}
-.summary-card p {
-  font-size: 11px;
-}
-.summary-card .progress-track {
-  height: 4px;
-  margin: 11px 0 9px;
 }
 .home-details {
   display: flex;
@@ -1545,49 +1360,6 @@ td > svg {
   background: #edf0f2;
 }
 @media (max-width: 760px) {
-  .weekly-goal {
-    padding: 22px 20px;
-  }
-  .goal-focus {
-    padding: 24px 0 26px;
-    gap: 18px;
-  }
-  .goal-focus .progress-ring {
-    width: 176px;
-    height: 176px;
-    padding: 11px;
-  }
-  .goal-focus .progress-ring strong {
-    font-size: 45px;
-  }
-  .goal-message {
-    font-size: 12px;
-  }
-  .home-summary {
-    gap: 12px;
-    margin-top: 12px;
-  }
-  .summary-card {
-    padding: 17px 14px;
-  }
-  .summary-card h2 {
-    font-size: 11px;
-    gap: 6px;
-  }
-  .summary-card h2 svg {
-    width: 15px;
-    height: 15px;
-  }
-  .summary-value {
-    font-size: 30px;
-    gap: 6px;
-  }
-  .summary-value span {
-    font-size: 10px;
-  }
-  .summary-card p {
-    font-size: 10px;
-  }
   .home-details {
     margin-top: 12px;
     gap: 8px;
@@ -2416,5 +2188,407 @@ td > svg {
   .add-exercise form {
     flex-direction: column;
     align-items: stretch;
+  }
+}
+
+.home-heading {
+  margin-bottom: 16px;
+}
+.home-heading h1 {
+  font-size: 21px;
+  letter-spacing: -0.4px;
+}
+.home-heading .eyebrow {
+  font-size: 8px;
+  margin-bottom: 8px;
+}
+.home-heading > p {
+  display: none;
+}
+.home-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.home-stat {
+  min-width: 0;
+  padding: 14px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.home-stat h2 {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 500;
+  color: #515961;
+  letter-spacing: 0;
+}
+.home-stat h2 svg {
+  color: #596d7d;
+}
+.progress-ring {
+  width: 70px;
+  height: 70px;
+  padding: 6px;
+  margin: 8px 0;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.progress-ring > div {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  background: #fff;
+}
+.progress-ring strong {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -1px;
+}
+.progress-ring strong span {
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--muted);
+  margin-left: 2px;
+}
+.home-stat-value {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 86px;
+  gap: 4px;
+}
+.home-stat-value strong {
+  font-size: 30px;
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.7px;
+}
+.home-stat-value > span {
+  color: var(--muted);
+  font-size: 10px;
+}
+.home-stat p {
+  font-size: 10px;
+  line-height: 1.5;
+  margin-top: auto;
+}
+.home-stat .progress-track {
+  width: 85%;
+  height: 3px;
+  margin: 0 0 6px;
+}
+.home-attendance {
+  margin-top: 14px;
+  padding: 17px 19px 13px;
+}
+.home-attendance .section-top h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+}
+.home-attendance .section-top > span {
+  font-size: 10px;
+  color: var(--muted);
+}
+.attendance-weeks {
+  display: flex;
+  gap: 5px;
+  margin: 12px 0 11px;
+}
+.attendance-weeks button {
+  flex: 1;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 7px 4px;
+  min-height: 33px;
+  background: #f5f6f7;
+  color: #5c6269;
+  font-size: 10px;
+}
+.attendance-weeks button[aria-pressed="true"] {
+  background: #eaf2f8;
+  color: #202a32;
+  border-color: #c3d8e8;
+}
+.attendance-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.attendance-days button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 0 0 4px;
+  border: 0;
+  background: none;
+  border-radius: 6px;
+}
+.attendance-days button > span {
+  font-size: 9px;
+  color: var(--muted);
+}
+.attendance-days button > strong {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 29px;
+  height: 29px;
+  border-radius: 50%;
+  background: #f2f4f6;
+  color: #60666e;
+  font-size: 10px;
+  font-weight: 400;
+}
+.attendance-days button.attended > strong {
+  background: var(--blue);
+  color: #17232c;
+}
+.attendance-days button.today > strong {
+  outline: 1px solid #71899c;
+  outline-offset: 2px;
+}
+.attendance-days button[aria-pressed="true"] {
+  background: #edf3f7;
+}
+.attendance-hint {
+  font-size: 9px;
+  margin-top: 9px;
+}
+.attendance-source {
+  font-size: 9px;
+  color: #72777d;
+  margin-top: 3px;
+}
+.signin-details {
+  border-top: 1px solid var(--border);
+  margin-top: 12px;
+  padding-top: 7px;
+}
+.signin-details .section-top h3 {
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.signin-details .icon-button {
+  min-height: 38px;
+  min-width: 38px;
+}
+.signin-details ul {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.signin-details li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+.signin-details li > svg {
+  color: #657783;
+  margin-top: 3px;
+}
+.signin-details strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+}
+.signin-details small {
+  display: block;
+  margin-top: 4px;
+  font-size: 9px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.signin-details > p {
+  font-size: 11px;
+  margin-bottom: 10px;
+}
+.home-workouts {
+  margin-top: 14px;
+  padding: 18px;
+}
+.home-workouts h2 {
+  font-size: 15px;
+}
+.workout-slate {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 15px;
+}
+.workout-slate button {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  padding: 13px 7px 9px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.workout-slate button[aria-pressed="true"] {
+  border-color: #96bfe1;
+  background: #f4f8fb;
+}
+.workout-slate button > span:first-child {
+  font-size: 11px;
+  font-weight: 500;
+}
+.workout-slate button > small {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.workout-slate strong {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 12px 0 7px;
+}
+.workout-slate .workout-focus {
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--muted);
+  min-height: 30px;
+}
+.workout-slate svg {
+  margin-top: 8px;
+  color: var(--muted);
+}
+.workout-plan-note {
+  font-size: 9px;
+  margin-top: 11px;
+}
+.workout-plan-detail {
+  margin-top: 15px;
+  border-top: 1px solid var(--border);
+  padding-top: 13px;
+}
+.workout-plan-detail h3 {
+  font-size: 13px;
+  letter-spacing: 0;
+}
+.workout-plan-detail ul {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.9;
+  padding-left: 16px;
+  margin: 9px 0 0;
+}
+.home-overview .club-events {
+  padding: 18px;
+  margin-top: 14px;
+}
+.home-overview .home-next-event {
+  margin-top: 13px;
+  margin-bottom: 0;
+}
+.home-overview .home-library-button {
+  margin-top: 14px;
+  padding: 14px 18px;
+  min-height: 65px;
+}
+@media (max-width: 760px) {
+  main:has(.home-overview) {
+    padding-top: 20px;
+  }
+  .home-heading h1 {
+    font-size: 18px;
+  }
+  .home-heading .eyebrow {
+    font-size: 7px;
+    letter-spacing: 1.4px;
+  }
+  .home-stat-row {
+    gap: 8px;
+  }
+  .home-stat {
+    padding: 11px 6px 10px;
+  }
+  .home-stat h2 {
+    font-size: 9px;
+    gap: 4px;
+  }
+  .home-stat h2 svg {
+    width: 16px;
+    height: 16px;
+  }
+  .home-stat p {
+    font-size: 9px;
+  }
+  .progress-ring {
+    width: 62px;
+    height: 62px;
+    padding: 5px;
+    margin: 7px 0;
+  }
+  .progress-ring strong {
+    font-size: 22px;
+  }
+  .progress-ring strong span {
+    font-size: 12px;
+  }
+  .home-stat-value {
+    height: 76px;
+  }
+  .home-stat-value strong {
+    font-size: 28px;
+  }
+  .home-stat-value > span {
+    font-size: 9px;
+  }
+  .home-attendance {
+    margin-top: 12px;
+    padding: 14px 13px 11px;
+  }
+  .home-workouts {
+    margin-top: 12px;
+    padding: 16px 13px;
+  }
+  .home-workouts h2 {
+    font-size: 14px;
+  }
+  .workout-slate {
+    gap: 6px;
+    margin-top: 13px;
+  }
+  .workout-slate button {
+    padding: 10px 5px 7px;
+  }
+  .workout-slate button > span:first-child {
+    font-size: 10px;
+  }
+  .workout-slate strong {
+    font-size: 17px;
+    margin: 10px 0 5px;
+  }
+  .workout-slate .workout-focus {
+    font-size: 9px;
+  }
+  .home-overview .club-events {
+    margin-top: 12px;
+    padding: 16px;
+  }
+  .home-overview .home-library-button {
+    margin-top: 12px;
   }
 }

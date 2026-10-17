@@ -250,7 +250,9 @@ function App() {
             />
           ) : (
             <>
-              <div className="page-heading">
+              <div
+                className={`page-heading ${page === "home" ? "home-heading" : ""}`}
+              >
                 <div className="eyebrow">
                   <span />
                   {page === "home"
@@ -304,7 +306,7 @@ function App() {
                 </p>
               </div>
               {page === "home" ? (
-                <HomePage member={member} data={data} />
+                <HomePage key={member.id} member={member} data={data} />
               ) : page === "progress" ? (
                 <Progress member={member} data={data} />
               ) : page === "skills" ? (

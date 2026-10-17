@@ -1,18 +1,13 @@
-import {
-  ArrowRight,
-  CalendarDays,
-  Check,
-  Flame,
-  Target,
-  Trophy,
-} from "lucide-react";
+import { ArrowRight, CalendarDays, Flame, Trophy } from "lucide-react";
 import { BoxingGlove } from "../components/BoxingGlove";
+import { Bullseye } from "../components/Bullseye";
+import { AttendanceWeek } from "../components/AttendanceWeek";
+import { WeeklyWorkouts } from "../components/WeeklyWorkouts";
 import { clubEvents, eventsAreDemo } from "../data/events";
 import { upcomingEvents } from "../domain/events";
 import { Card } from "../components/UI";
-import { attendanceStats, formatDate, shiftDate } from "../domain/attendance";
+import { attendanceStats, formatDate } from "../domain/attendance";
 import type { DemoData, MemberProfile } from "../domain/models";
-
 export function HomePage({
   member,
   data,
@@ -20,19 +15,17 @@ export function HomePage({
   member: MemberProfile;
   data: DemoData;
 }) {
-  const s = attendanceStats(member, data.attendance);
-  const remaining = Math.max(0, member.weeklyTarget - s.completed);
+  const s = attendanceStats(member, data.attendance),
+    remaining = Math.max(0, member.weeklyTarget - s.completed);
   const nextEvent = upcomingEvents(clubEvents, s.today)[0];
   return (
     <div className="home-overview">
-      <Card className="weekly-goal">
-        <div className="section-top">
+      <div className="home-stat-row">
+        <Card className="home-stat goal-stat">
           <h2>
-            <Target size={19} /> Your weekly goal
+            <Bullseye size={18} />
+            <span>Your weekly goal</span>
           </h2>
-          <span className="pill">THIS WEEK</span>
-        </div>
-        <div className="goal-focus">
           <div
             className="progress-ring"
             style={{
@@ -44,62 +37,34 @@ export function HomePage({
             <div>
               <strong>
                 {s.completed}
-                <span> / {member.weeklyTarget}</span>
+                <span>/{member.weeklyTarget}</span>
               </strong>
-              <small>WORKOUTS</small>
             </div>
           </div>
-          <p className="goal-message" role="status">
+          <p role="status">
             {remaining === 0
-              ? "Ring complete. Weekly goal achieved!"
-              : `${remaining === 1 ? "One" : remaining} more workout${remaining === 1 ? "" : "s"} to complete your ring.`}
+              ? "Ring complete!"
+              : `${remaining} to go this week`}
           </p>
-        </div>
-        <div className="week-days">
-          {["M", "T", "W", "T", "F", "S", "S"].map((dayLabel, i) => {
-            const day = shiftDate(s.currentWeek, i);
-            const attended = s.days.has(day);
-            return (
-              <div
-                key={day}
-                className={`${day === s.today ? "today" : ""} ${attended ? "attended" : ""}`}
-              >
-                <span>{dayLabel}</span>
-                <div
-                  aria-label={`${formatDate(day, { weekday: "long" })}: ${attended ? "attended" : "no visit"}`}
-                >
-                  {attended ? <Check size={17} /> : Number(day.slice(-2))}
-                </div>
-                {day === s.today && <small>Today</small>}
-              </div>
-            );
-          })}
-        </div>
-        <div className="card-bottom">
-          <span>
-            {formatDate(s.currentWeek)} –{" "}
-            {formatDate(shiftDate(s.currentWeek, 6))}
-          </span>
-          <span>Mon – Sun · NZ time</span>
-        </div>
-      </Card>
-      <div className="home-summary">
-        <Card className="summary-card">
-          <h2>
-            <Flame size={17} /> Weekly streak
-          </h2>
-          <div className="summary-value">
-            {s.streak}
-            <span>{s.streak === 1 ? "week" : "weeks"}</span>
-          </div>
-          <p>{s.streak ? "Keep showing up." : "Start with your next visit."}</p>
         </Card>
-        <Card className="summary-card">
+        <Card className="home-stat">
           <h2>
-            <Trophy size={17} /> Next milestone
+            <Flame size={17} />
+            <span>Weekly streak</span>
           </h2>
-          <div className="summary-value">
-            {s.next}
+          <div className="home-stat-value">
+            <strong>{s.streak}</strong>
+            <span>week{s.streak === 1 ? "" : "s"}</span>
+          </div>
+          <p>{s.streak ? "Keep it going." : "Start this week."}</p>
+        </Card>
+        <Card className="home-stat">
+          <h2>
+            <Trophy size={17} />
+            <span>Next milestone</span>
+          </h2>
+          <div className="home-stat-value">
+            <strong>{s.next}</strong>
             <span>workouts</span>
           </div>
           <div
@@ -110,20 +75,16 @@ export function HomePage({
             <div style={{ width: `${s.milestoneProgress}%` }} />
           </div>
           <p>
-            {s.next - s.total} to go · {s.total} completed
+            {s.next - s.total} to go · {s.total} done
           </p>
         </Card>
       </div>
-      <a className="home-library-button" href="#skills">
-        <BoxingGlove size={25} />
-        <span>
-          Skills Library<small>Box · Lift · Sweat</small>
-        </span>
-        <ArrowRight size={18} />
-      </a>
+      <AttendanceWeek memberId={member.id} events={data.attendance} />
+      <WeeklyWorkouts week={s.currentWeek} />
       <Card className="club-events">
         <h2>
-          <CalendarDays size={18} /> Upcoming club events
+          <CalendarDays size={17} />
+          Upcoming club events
         </h2>
         {nextEvent ? (
           <a className="home-next-event" href="#events">
@@ -143,6 +104,13 @@ export function HomePage({
           View calendar <ArrowRight size={15} />
         </a>
       </Card>
+      <a className="home-library-button" href="#skills">
+        <BoxingGlove size={25} />
+        <span>
+          Skills Library<small>Box · Lift · Sweat</small>
+        </span>
+        <ArrowRight size={18} />
+      </a>
       <div className="home-details">
         <p>
           Last club visit:{" "}

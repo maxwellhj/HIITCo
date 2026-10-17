@@ -16,6 +16,8 @@ export interface AttendanceEvent {
   id: string;
   memberId: string;
   occurredAt: string;
+  source?: "demo" | "gymmaster";
+  reference?: string;
 }
 export interface MemberRepository {
   load(): Promise<DemoData>;

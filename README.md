@@ -15,9 +15,13 @@ Run these commands from the repository root. Open the address Vite prints. `npm 
 
 ## Try the demo
 
-Home shows Sarah's attendance by default, with a weekly completion ring, attendance days, and compact side-by-side streak and next-milestone cards. The member selector at the bottom switches between 12 fictional members. Progress uses the same event data and calculations. Staff demo (sidebar, or the top-right dashboard icon on mobile) provides search, a member goal editor and a member dashboard shortcut. Save a target from 1–7 visits; the app updates immediately and remembers it in this browser using localStorage. Reload to confirm persistence. Browser storage failures show an error; load failures offer a reset which removes only saved demo targets. No sign-in or access restriction is implemented: staff mode is openly accessible and clearly marked as a demo.
+Home shows Sarah's attendance by default, with a smaller greeting and a single compact row containing the weekly completion ring, streak and next-milestone cards. Club sign-ins sit below that row. Select This week, Last week or 2 weeks ago, then tap a day to see every recorded check-in time and its reference in Pacific/Auckland time. This currently uses labelled demo attendance records; GymMaster is not connected. Check-in detail and summary totals share the same filtering and deduplication rules. The member selector at the bottom switches between 12 fictional members. Progress uses the same event data and calculations. Staff demo (sidebar, or the top-right dashboard icon on mobile) provides search, a member goal editor and a member dashboard shortcut. Save a target from 1–7 visits; the app updates immediately and remembers it in this browser using localStorage. Reload to confirm persistence. Browser storage failures show an error; load failures offer a reset which removes only saved demo targets. No sign-in or access restriction is implemented: staff mode is openly accessible and clearly marked as a demo.
 
 Open **Skills Library** using the Home button. Skills has selectable Box, Lift and Sweat categories for trainer technique and how-to videos. Each category filters the shared video list in `src/data/skills.ts`; the list is empty until trainer-approved videos are added. Video cards support playback and optional English captions. Staff uploads are not implemented yet. Messages contains a fictional club announcement; neither is a live content or messaging system. The header and sidebar use the supplied transparent HIIT Co. logo in `public/hiit-co-logo.png`, framed to its visible artwork without changing the original image. Logo links return to Home. The saved app name is **HIIT Co. Hub** on Android and iPhone. The supplied app logo is retained unchanged in `src/assets/hiit-co-app-logo.png` and rendered onto white square icons for Android (192/512), iPhone (180), and a separately padded Android maskable icon. Existing home-screen installations may retain their previous name/icon until removed and added again after deployment. Home-screen installation uses the supported browser prompt, with manual iPhone/Android instructions as a fallback. The app shell is available offline after an initial production visit and successful service-worker installation; offline data is fictional only. Fresh demo histories are generated relative to the current NZ week, so they remain useful over time.
+
+## Home workout slate
+
+The Monday–Wednesday **This week’s workout** slate uses `src/data/workoutPlan.ts`. Tap a day to expand its sample plan. Dates are anchored to the current NZ Monday–Sunday week. These are explicitly labelled examples, not the gym’s published programme. A staff publishing workflow and real weekly programme storage remain to be implemented. Upcoming club events appear above the Skills Library button.
 
 ## Training log
 
@@ -36,7 +40,7 @@ The Events calendar replaces Skills in desktop and mobile navigation. It uses Mo
 ## Organisation
 
 - `src/domain/models.ts`: internal member, membership, visit and repository contracts.
-- `src/domain/attendance.ts`: shared, independently tested attendance, dates, streaks and milestones.
+- `src/domain/attendance.ts`: shared, independently tested attendance, dates, streaks, milestones and check-in records. Internal attendance events may carry a source and reference; future verified GymMaster records can use these fields without exposing vendor credentials.
 - `src/data/mock.ts`: deterministic fictional histories and browser-persisted target overrides.
 - `src/integrations/`: future backend GymMaster contract and Supabase security notes. No API requests or credentials.
 - `src/App.tsx`: application state, navigation and install help.

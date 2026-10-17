@@ -54,6 +54,8 @@ export function createMockData(now = new Date()): DemoData {
           id: `${m.id}-${w}-${d}`,
           memberId: m.id,
           occurredAt: `${day}T07:30:00+13:00`,
+          source: "demo",
+          reference: `DEMO-${m.id}-${w}-${d}`,
         });
         added++;
       }

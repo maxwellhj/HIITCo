@@ -33,6 +33,35 @@ export function milestones(total: number) {
     next: levels.find((n) => n > total)!,
   };
 }
+export function attendanceVisits(
+  events: readonly AttendanceEvent[],
+  memberId: string,
+  now = new Date(),
+): AttendanceEvent[] {
+  // IDs identify visits: duplicate imported events do not inflate attendance.
+  return [
+    ...new Map(
+      events
+        .filter(
+          (e) =>
+            e.memberId === memberId &&
+            Number.isFinite(Date.parse(e.occurredAt)) &&
+            new Date(e.occurredAt) <= now,
+        )
+        .map((e) => [e.id, e]),
+    ).values(),
+  ].sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
+}
+export function visitsOnDay(
+  events: readonly AttendanceEvent[],
+  memberId: string,
+  day: string,
+  now = new Date(),
+) {
+  return attendanceVisits(events, memberId, now).filter(
+    (visit) => dateKey(visit.occurredAt) === day,
+  );
+}
 export function attendanceStats(
   member: MemberProfile,
   events: AttendanceEvent[],
@@ -40,19 +69,7 @@ export function attendanceStats(
 ) {
   const today = dateKey(now),
     currentWeek = weekKey(today);
-  // IDs identify visits: duplicate imported events do not inflate attendance.
-  const visits = [
-    ...new Map(
-      events
-        .filter(
-          (e) =>
-            e.memberId === member.id &&
-            Number.isFinite(Date.parse(e.occurredAt)) &&
-            new Date(e.occurredAt) <= now,
-        )
-        .map((e) => [e.id, e]),
-    ).values(),
-  ].sort((a, b) => Date.parse(a.occurredAt) - Date.parse(b.occurredAt));
+  const visits = attendanceVisits(events, member.id, now);
   const weeks = new Map<string, number>();
   const days = new Set<string>();
   visits.forEach((v) => {
