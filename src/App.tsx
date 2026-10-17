@@ -1,0 +1,380 @@
+import { useEffect, useState } from "react";
+import {
+  ArrowDownToLine,
+  Bell,
+  ChevronRight,
+  Dumbbell,
+  Home,
+  LayoutDashboard,
+  MessageCircle,
+  TrendingUp,
+  Users,
+  X,
+  Zap,
+  Check,
+} from "lucide-react";
+import type { DemoData } from "./domain/models";
+import { formatDate } from "./domain/attendance";
+import { demoRepository, resetDemo } from "./data/mock";
+import { Brand, Card } from "./components/UI";
+import { containDialog } from "./components/dialog";
+import { HomePage } from "./pages/HomePage";
+import { Progress } from "./pages/Progress";
+import { Staff } from "./pages/Staff";
+import { Workouts } from "./pages/Workouts";
+import { Messages } from "./pages/Messages";
+type Page = "home" | "workouts" | "progress" | "messages" | "staff";
+type InstallPrompt = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: string }>;
+};
+const pages = [
+  { id: "home", label: "Home", icon: Home },
+  { id: "workouts", label: "Workouts", icon: Dumbbell },
+  { id: "progress", label: "Progress", icon: TrendingUp },
+  { id: "messages", label: "Messages", icon: MessageCircle },
+] as const;
+function App() {
+  const [data, setData] = useState<DemoData | null>(null),
+    [error, setError] = useState(""),
+    [page, setPage] = useState<Page>(() => getPage()),
+    [memberId, setMemberId] = useState("member-1"),
+    [notice, setNotice] = useState(""),
+    [install, setInstall] = useState<InstallPrompt | null>(null),
+    [showInstall, setShowInstall] = useState(false);
+  function getPage(): Page {
+    const route = window.location.hash.slice(1);
+    return ["home", "workouts", "progress", "messages", "staff"].includes(route)
+      ? (route as Page)
+      : "home";
+  }
+  async function load() {
+    setError("");
+    try {
+      setData(await demoRepository.load());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unable to load demo data.");
+    }
+  }
+  useEffect(() => {
+    void load();
+    const route = () => setPage(getPage());
+    window.addEventListener("hashchange", route);
+    const handler = (event: Event) => {
+      event.preventDefault();
+      setInstall(event as InstallPrompt);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => {
+      window.removeEventListener("hashchange", route);
+      window.removeEventListener("beforeinstallprompt", handler);
+    };
+  }, []);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 5000);
+    return () => clearTimeout(timer);
+  }, [notice]);
+  function navigate(next: Page) {
+    window.location.hash = next;
+    setPage(next);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  useEffect(() => {
+    if (!showInstall) return;
+    return containDialog(() => setShowInstall(false));
+  }, [showInstall]);
+  const member =
+    data?.members.find((m) => m.id === memberId) ?? data?.members[0];
+  async function saveTarget(id: string, target: number) {
+    await demoRepository.saveTarget(id, target);
+    setData((current) =>
+      current
+        ? {
+            ...current,
+            members: current.members.map((m) =>
+              m.id === id ? { ...m, weeklyTarget: target } : m,
+            ),
+          }
+        : current,
+    );
+    setNotice("Weekly target saved. Member progress is up to date.");
+  }
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <a href="#home" className="brand-link">
+          <Brand />
+        </a>
+        <div className="club-label">
+          CHRISTCHURCH, NZ <span>MEMBER CLUB</span>
+        </div>
+        <div className="nav-label">YOUR SPACE</div>
+        <nav aria-label="Main navigation">
+          {pages.map(({ id, label, icon: Icon }) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              className={page === id ? "active" : ""}
+              aria-current={page === id ? "page" : undefined}
+            >
+              <Icon size={20} />
+              {label}
+              {page === id && <span className="nav-dot" />}
+            </a>
+          ))}
+        </nav>
+        <div className="sidebar-note">
+          <Zap size={24} />
+          <h3>
+            30 minutes.
+            <br />
+            All you need.
+          </h3>
+          <p>
+            Show up. Get stronger.
+            <br />
+            We'll take it from there.
+          </p>
+          <span>STRONGER, TOGETHER.</span>
+        </div>
+        <a
+          href="#staff"
+          className={`staff-link ${page === "staff" ? "selected" : ""}`}
+        >
+          <LayoutDashboard size={18} /> Staff demo <ChevronRight size={16} />
+        </a>
+        <div className="sidebar-footer">
+          HIIT Co. Member App <span>DEMO v0.1</span>
+        </div>
+      </aside>
+      <div className="main-shell">
+        <header className="topbar">
+          <div className="mobile-brand">
+            <Brand />
+          </div>
+          <div className="breadcrumb">
+            Your club. Your pace. <span>Your progress.</span>
+          </div>
+          <div className="top-actions">
+            <span className="demo-badge">DEMO EXPERIENCE</span>
+            <button
+              className="icon-button"
+              aria-label="View club messages"
+              onClick={() => navigate("messages")}
+            >
+              <Bell size={20} />
+              <i />
+            </button>
+            <button
+              className="avatar"
+              aria-label="Go to member home"
+              onClick={() => navigate("home")}
+            >
+              {member?.initials ?? "HC"}
+            </button>
+          </div>
+        </header>
+        <main id="main-content">
+          {error ? (
+            <Card className="state">
+              <h1>Let’s get you back on track.</h1>
+              <p role="alert">{error}</p>
+              <button className="primary" onClick={() => void load()}>
+                Try again
+              </button>
+              <button
+                className="secondary"
+                onClick={() => {
+                  try {
+                    resetDemo();
+                    void load();
+                  } catch {
+                    setError(
+                      "Browser storage is unavailable. Enable site storage to use the demo.",
+                    );
+                  }
+                }}
+              >
+                Reset saved demo targets
+              </button>
+            </Card>
+          ) : !data || !member ? (
+            <div className="state" role="status">
+              Getting your club ready…
+            </div>
+          ) : page === "staff" ? (
+            <Staff
+              data={data}
+              onSave={saveTarget}
+              onPreview={(id) => {
+                setMemberId(id);
+                navigate("home");
+              }}
+            />
+          ) : (
+            <>
+              <div className="page-heading">
+                <div className="eyebrow">
+                  <span />
+                  {page === "home"
+                    ? "LET’S MAKE IT A GOOD WEEK"
+                    : page === "progress"
+                      ? "EVERY VISIT ADDS UP"
+                      : page === "workouts"
+                        ? "TRAIN WITH PURPOSE"
+                        : "YOUR CLUB CONNECTION"}
+                </div>
+                <div className="heading-line">
+                  <h1>
+                    {page === "home" ? (
+                      <>
+                        Hey, {member.firstName}
+                        <span className="wave">✳</span>
+                      </>
+                    ) : page === "progress" ? (
+                      "Look how far you’ve come."
+                    ) : page === "workouts" ? (
+                      "A little sweat. A lot stronger."
+                    ) : (
+                      "In your corner."
+                    )}
+                  </h1>
+                  <span className="date-label">
+                    {formatDate(new Date().toISOString(), {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </span>
+                </div>
+                <p>
+                  {page === "home"
+                    ? "Every workout is a step forward. Let’s keep your momentum going."
+                    : page === "progress"
+                      ? "Consistency looks good on you. Here’s your training story so far."
+                      : page === "workouts"
+                        ? "Strength, boxing and HIIT. Thirty minutes that make a difference."
+                        : "Updates, encouragement and good things from the HIIT Co. team."}
+                </p>
+              </div>
+              {page === "home" ? (
+                <HomePage member={member} data={data} navigate={navigate} />
+              ) : page === "progress" ? (
+                <Progress member={member} data={data} />
+              ) : page === "workouts" ? (
+                <Workouts />
+              ) : (
+                <Messages />
+              )}
+              <div className="demo-footer">
+                <span>
+                  <span className="status-dot" /> Fictional demo data · New
+                  Zealand time
+                </span>
+                <label>
+                  Viewing as{" "}
+                  <select
+                    aria-label="Demo member"
+                    value={memberId}
+                    onChange={(e) => setMemberId(e.target.value)}
+                  >
+                    {data.members.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.firstName} {m.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            </>
+          )}
+        </main>
+        <footer className="page-footer">
+          <span>BUILT FOR YOUR EVERYDAY STRONGER.</span>
+          <button onClick={() => setShowInstall(true)}>
+            <ArrowDownToLine size={15} /> Add to your home screen
+          </button>
+        </footer>
+      </div>
+      <nav className="bottom-nav" aria-label="Mobile navigation">
+        {pages.map(({ id, label, icon: Icon }) => (
+          <a
+            key={id}
+            href={`#${id}`}
+            className={page === id ? "active" : ""}
+            aria-current={page === id ? "page" : undefined}
+          >
+            <Icon size={21} />
+            <span>{label}</span>
+          </a>
+        ))}
+        <a href="#staff" className={page === "staff" ? "active" : ""}>
+          <Users size={21} />
+          <span>Staff</span>
+        </a>
+      </nav>
+      {notice && (
+        <div className="toast" role="status">
+          <Check size={19} />
+          {notice}
+          <button
+            aria-label="Dismiss notification"
+            onClick={() => setNotice("")}
+          >
+            <X size={16} />
+          </button>
+        </div>
+      )}
+      {showInstall && (
+        <div className="modal-backdrop">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="install-title"
+            className="modal"
+          >
+            <button
+              className="modal-close icon-button"
+              onClick={() => setShowInstall(false)}
+              aria-label="Close installation instructions"
+              autoFocus
+            >
+              <X />
+            </button>
+            <div className="icon-tile">
+              <ArrowDownToLine />
+            </div>
+            <h2 id="install-title">Your club, one tap away.</h2>
+            <p>Install HIIT Co. for a full-screen app experience.</p>
+            {install ? (
+              <button
+                className="primary"
+                onClick={async () => {
+                  await install.prompt();
+                  await install.userChoice;
+                  setInstall(null);
+                  setShowInstall(false);
+                }}
+              >
+                Install HIIT Co.
+              </button>
+            ) : (
+              <p>
+                On iPhone, open this app in Safari, tap <strong>Share</strong>,
+                then <strong>Add to Home Screen</strong>. On Android, use your
+                browser menu and choose <strong>Install app</strong> or{" "}
+                <strong>Add to Home screen</strong>. Installation requires HTTPS
+                or a local development connection.
+              </p>
+            )}
+            <button className="secondary" onClick={() => setShowInstall(false)}>
+              Got it
+            </button>
+          </section>
+        </div>
+      )}
+    </div>
+  );
+}
+export default App;
