@@ -7,8 +7,8 @@ import {
   Home,
   LayoutDashboard,
   MessageCircle,
+  Pencil,
   TrendingUp,
-  Users,
   X,
   Zap,
   Check,
@@ -23,8 +23,10 @@ import { Progress } from "./pages/Progress";
 import { Staff } from "./pages/Staff";
 import { Skills } from "./pages/Skills";
 import { Events } from "./pages/Events";
+import { TrainingLog } from "./pages/TrainingLog";
 import { Messages } from "./pages/Messages";
-type Page = "home" | "skills" | "events" | "progress" | "messages" | "staff";
+type Page =
+  "home" | "skills" | "events" | "log" | "progress" | "messages" | "staff";
 type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
@@ -32,6 +34,7 @@ type InstallPrompt = Event & {
 const pages = [
   { id: "home", label: "Home", icon: Home },
   { id: "events", label: "Events", icon: CalendarDays },
+  { id: "log", label: "Log", icon: Pencil },
   { id: "progress", label: "Progress", icon: TrendingUp },
   { id: "messages", label: "Messages", icon: MessageCircle },
 ] as const;
@@ -50,6 +53,7 @@ function App() {
       "home",
       "skills",
       "events",
+      "log",
       "progress",
       "messages",
       "staff",
@@ -184,13 +188,20 @@ function App() {
           <div className="top-actions">
             <span className="demo-badge">DEMO EXPERIENCE</span>
             <button
-              className="icon-button"
+              className="icon-button club-messages"
               aria-label="View club messages"
               onClick={() => navigate("messages")}
             >
               <Bell size={20} />
               <i />
             </button>
+            <a
+              href="#staff"
+              className="icon-button mobile-staff"
+              aria-label="Open staff demo"
+            >
+              <LayoutDashboard size={20} />
+            </a>
             <button
               className="avatar"
               aria-label="Go to member home"
@@ -250,7 +261,9 @@ function App() {
                         ? "LEARN. PRACTISE. PROGRESS."
                         : page === "events"
                           ? "YOUR CLUB CALENDAR"
-                          : "YOUR CLUB CONNECTION"}
+                          : page === "log"
+                            ? "A LITTLE STRONGER, EVERY SESSION"
+                            : "YOUR CLUB CONNECTION"}
                 </div>
                 <div className="heading-line">
                   <h1>
@@ -262,6 +275,8 @@ function App() {
                       "Skills Library"
                     ) : page === "events" ? (
                       "What’s on at HIIT Co."
+                    ) : page === "log" ? (
+                      "Your training log."
                     ) : (
                       "In your corner."
                     )}
@@ -283,7 +298,9 @@ function App() {
                         ? "Technique tips and how-to videos, all in one place."
                         : page === "events"
                           ? "Explore upcoming events and tap a date for the details."
-                          : "Updates, encouragement and good things from the HIIT Co. team."}
+                          : page === "log"
+                            ? "Record your sets. Follow your progress. Build on your best."
+                            : "Updates, encouragement and good things from the HIIT Co. team."}
                 </p>
               </div>
               {page === "home" ? (
@@ -294,13 +311,17 @@ function App() {
                 <Skills />
               ) : page === "events" ? (
                 <Events />
+              ) : page === "log" ? (
+                <TrainingLog key={member.id} member={member} />
               ) : (
                 <Messages />
               )}
               <div className="demo-footer">
                 <span>
-                  <span className="status-dot" /> Fictional demo data · New
-                  Zealand time
+                  <span className="status-dot" />{" "}
+                  {page === "log"
+                    ? "Demo mode · Log entries saved on this device"
+                    : "Fictional demo data · New Zealand time"}
                 </span>
                 <label>
                   Viewing as{" "}
@@ -339,10 +360,6 @@ function App() {
             <span>{label}</span>
           </a>
         ))}
-        <a href="#staff" className={page === "staff" ? "active" : ""}>
-          <Users size={21} />
-          <span>Staff</span>
-        </a>
       </nav>
       {notice && (
         <div className="toast" role="status">
