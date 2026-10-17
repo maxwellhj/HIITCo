@@ -162,7 +162,7 @@ function App() {
           <LayoutDashboard size={18} /> Staff demo <ChevronRight size={16} />
         </a>
         <div className="sidebar-footer">
-          HIIT Co. Member App <span>DEMO v0.1</span>
+          HIIT Co. Hub <span>DEMO v0.1</span>
         </div>
       </aside>
       <div className="main-shell">
@@ -376,7 +376,7 @@ function App() {
               <ArrowDownToLine />
             </div>
             <h2 id="install-title">Your club, one tap away.</h2>
-            <p>Install HIIT Co. for a full-screen app experience.</p>
+            <p>Install HIIT Co. Hub for a full-screen app experience.</p>
             {install ? (
               <button
                 className="primary"
@@ -387,7 +387,7 @@ function App() {
                   setShowInstall(false);
                 }}
               >
-                Install HIIT Co.
+                Install HIIT Co. Hub
               </button>
             ) : (
               <p>

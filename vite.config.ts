@@ -8,20 +8,32 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: "prompt",
-      includeAssets: ["icon.svg", "hiit-co-logo.png"],
+      includeAssets: [
+        "hub-icon.svg",
+        "hub-apple-touch-icon.png",
+        "hiit-co-logo.png",
+      ],
       manifest: {
-        name: "HIIT Co. Member App",
-        short_name: "HIIT Co.",
+        name: "HIIT Co. Hub",
+        short_name: "HIIT Co. Hub",
         description: "Your training. Your progress. Your HIIT Co.",
         theme_color: "#ffffff",
         background_color: "#ffffff",
         display: "standalone",
         start_url: "/",
+        id: "/",
+        scope: "/",
         icons: [
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
           {
-            src: "/icon.svg",
+            src: "/hub-maskable-512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "maskable",
+          },
+          { src: "/hub-icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/hub-icon-512.png", sizes: "512x512", type: "image/png" },
+          {
+            src: "/hub-icon.svg",
             sizes: "any",
             type: "image/svg+xml",
             purpose: "any",
