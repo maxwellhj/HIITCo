@@ -1,12 +1,12 @@
 import { Play } from "lucide-react";
 import { Card } from "../components/UI";
-import { BoxingGloves } from "../components/BoxingGloves";
+import { BoxingGlove } from "../components/BoxingGlove";
 
 export function Skills() {
   return (
     <Card className="skills-library">
       <div className="skills-preview" aria-hidden="true">
-        <BoxingGloves size={56} />
+        <BoxingGlove size={56} />
         <span className="skills-play">
           <Play size={18} />
         </span>

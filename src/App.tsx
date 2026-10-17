@@ -21,7 +21,7 @@ import { HomePage } from "./pages/HomePage";
 import { Progress } from "./pages/Progress";
 import { Staff } from "./pages/Staff";
 import { Skills } from "./pages/Skills";
-import { BoxingGloves } from "./components/BoxingGloves";
+import { BoxingGlove } from "./components/BoxingGlove";
 import { Messages } from "./pages/Messages";
 type Page = "home" | "skills" | "progress" | "messages" | "staff";
 type InstallPrompt = Event & {
@@ -30,7 +30,7 @@ type InstallPrompt = Event & {
 };
 const pages = [
   { id: "home", label: "Home", icon: Home },
-  { id: "skills", label: "Skills", icon: BoxingGloves },
+  { id: "skills", label: "Skills", icon: BoxingGlove },
   { id: "progress", label: "Progress", icon: TrendingUp },
   { id: "messages", label: "Messages", icon: MessageCircle },
 ] as const;
