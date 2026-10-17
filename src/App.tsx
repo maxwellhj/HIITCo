@@ -31,7 +31,7 @@ type InstallPrompt = Event & {
 };
 const pages = [
   { id: "home", label: "Home", icon: Home },
-  { id: "events", label: "EVENTS", icon: CalendarDays },
+  { id: "events", label: "Events", icon: CalendarDays },
   { id: "progress", label: "Progress", icon: TrendingUp },
   { id: "messages", label: "Messages", icon: MessageCircle },
 ] as const;
@@ -112,7 +112,15 @@ function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <a href="#home" className="brand-link">
+        <a
+          href="#home"
+          className="brand-link"
+          aria-label="HIIT Co. home"
+          onClick={(event) => {
+            event.preventDefault();
+            navigate("home");
+          }}
+        >
           <Brand />
         </a>
         <div className="club-label">
@@ -159,9 +167,17 @@ function App() {
       </aside>
       <div className="main-shell">
         <header className="topbar">
-          <div className="mobile-brand">
+          <a
+            href="#home"
+            className="mobile-brand"
+            aria-label="HIIT Co. home"
+            onClick={(event) => {
+              event.preventDefault();
+              navigate("home");
+            }}
+          >
             <Brand />
-          </div>
+          </a>
           <div className="breadcrumb">
             Your club. Your pace. <span>Your progress.</span>
           </div>
