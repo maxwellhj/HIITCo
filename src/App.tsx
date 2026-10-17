@@ -230,7 +230,6 @@ function App() {
                     {page === "home" ? (
                       <>
                         Hey, {member.firstName}
-                        <span className="wave">✳</span>
                       </>
                     ) : page === "progress" ? (
                       "Look how far you’ve come."
@@ -250,7 +249,7 @@ function App() {
                 </div>
                 <p>
                   {page === "home"
-                    ? "Every workout is a step forward. Let’s keep your momentum going."
+                    ? "Your week, at a glance."
                     : page === "progress"
                       ? "Consistency looks good on you. Here’s your training story so far."
                       : page === "workouts"
@@ -259,7 +258,7 @@ function App() {
                 </p>
               </div>
               {page === "home" ? (
-                <HomePage member={member} data={data} navigate={navigate} />
+                <HomePage member={member} data={data} />
               ) : page === "progress" ? (
                 <Progress member={member} data={data} />
               ) : page === "workouts" ? (

@@ -15,7 +15,7 @@ Run these commands from the repository root. Open the address Vite prints. `npm 
 
 ## Try the demo
 
-Home shows Sarah's attendance by default. The member selector at the bottom switches between 12 fictional members. Progress uses the same event data and calculations. Staff demo (sidebar or mobile navigation) provides search, a member goal editor and a member dashboard shortcut. Save a target from 1–7 visits; the app updates immediately and remembers it in this browser using localStorage. Reload to confirm persistence. Browser storage failures show an error; load failures offer a reset which removes only saved demo targets. No sign-in or access restriction is implemented: staff mode is openly accessible and clearly marked as a demo.
+Home shows Sarah's attendance by default, with a weekly completion ring, attendance days, and compact side-by-side streak and next-milestone cards. The member selector at the bottom switches between 12 fictional members. Progress uses the same event data and calculations. Staff demo (sidebar or mobile navigation) provides search, a member goal editor and a member dashboard shortcut. Save a target from 1–7 visits; the app updates immediately and remembers it in this browser using localStorage. Reload to confirm persistence. Browser storage failures show an error; load failures offer a reset which removes only saved demo targets. No sign-in or access restriction is implemented: staff mode is openly accessible and clearly marked as a demo.
 
 Workouts contains expandable sample sessions. Messages contains a fictional club announcement; neither is a live content or messaging system. The logo is a text placeholder pending final brand assets. Home-screen installation uses the supported browser prompt, with manual iPhone/Android instructions as a fallback. The app shell is available offline after an initial production visit and successful service-worker installation; offline data is fictional only. Fresh demo histories are generated relative to the current NZ week, so they remain useful over time.
 
@@ -27,7 +27,7 @@ Workouts contains expandable sample sessions. Messages contains a fictional club
 - `src/integrations/`: future backend GymMaster contract and Supabase security notes. No API requests or credentials.
 - `src/App.tsx`: application state, navigation and install help.
 - `src/pages/`: individual member and staff screens. `src/components/`: shared cards, branding and dialog keyboard handling.
-- `src/styles.css`: responsive dark brand system, using Tailwind's Vite integration and custom component styles.
+- `src/styles.css`: responsive white brand system with black/grey text and blue attendance accents, using Tailwind's Vite integration and custom component styles.
 - `public/`: app icons. `vite.config.ts`: public app-shell caching and install manifest.
 
 ## Attendance rules

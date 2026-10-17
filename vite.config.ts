@@ -13,8 +13,8 @@ export default defineConfig({
         name: "HIIT Co. Member App",
         short_name: "HIIT Co.",
         description: "Your training. Your progress. Your HIIT Co.",
-        theme_color: "#96bfe1",
-        background_color: "#121517",
+        theme_color: "#ffffff",
+        background_color: "#ffffff",
         display: "standalone",
         start_url: "/",
         icons: [
