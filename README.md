@@ -21,7 +21,7 @@ Open **Skills Library** using the Home button. Skills has selectable Box, Lift a
 
 ## Home workout slate
 
-The Monday–Wednesday **This week’s workout** slate uses `src/data/workoutPlan.ts`. Tap a day to expand its sample plan. Dates are anchored to the current NZ Monday–Sunday week. These are explicitly labelled examples, not the gym’s published programme. A staff publishing workflow and real weekly programme storage remain to be implemented. Upcoming club events appear above the Skills Library button.
+The Monday–Wednesday **This week’s workout** slate uses `src/data/workoutPlan.ts`. Day buttons show only the day and date, anchored to the current NZ Monday–Sunday week. Opening a day shows nine numbered stations, each a three-minute round, in a horizontal scroll-snap carousel. Members can swipe, use previous/next arrows, choose a station number, or focus the carousel and use keyboard left/right arrows. Switching days resets to Station 1. Each station has its own exercises and instructions. Trackable exercise names link to the matching Log detail through routes such as `#log/back-squat`; these links also survive reloads. Non-trackable movements remain plain text. These are explicitly labelled sample station workouts, not the gym’s published programme. A staff publishing workflow and real weekly programme storage remain to be implemented. Upcoming club events appear above the Skills Library button.
 
 ## Training log
 

@@ -41,9 +41,17 @@ function load(memberId: string) {
     };
   }
 }
-export function TrainingLog({ member }: { member: MemberProfile }) {
+export function TrainingLog({
+  member,
+  initialExerciseId = null,
+}: {
+  member: MemberProfile;
+  initialExerciseId?: string | null;
+}) {
   const [state, setState] = useState(() => load(member.id));
-  const [exerciseId, setExerciseId] = useState<string | null>(null),
+  const [exerciseId, setExerciseId] = useState<string | null>(
+      initialExerciseId,
+    ),
     [exerciseName, setExerciseName] = useState(""),
     [adding, setAdding] = useState(false),
     [search, setSearch] = useState("");

@@ -42,12 +42,15 @@ function App() {
   const [data, setData] = useState<DemoData | null>(null),
     [error, setError] = useState(""),
     [page, setPage] = useState<Page>(() => getPage()),
+    [logExerciseId, setLogExerciseId] = useState<string | null>(() =>
+      getLogExerciseId(),
+    ),
     [memberId, setMemberId] = useState("member-1"),
     [notice, setNotice] = useState(""),
     [install, setInstall] = useState<InstallPrompt | null>(null),
     [showInstall, setShowInstall] = useState(false);
   function getPage(): Page {
-    const hash = window.location.hash.slice(1);
+    const hash = window.location.hash.slice(1).split("/")[0];
     const route = hash === "workouts" ? "skills" : hash;
     return [
       "home",
@@ -61,6 +64,15 @@ function App() {
       ? (route as Page)
       : "home";
   }
+  function getLogExerciseId(): string | null {
+    const [route, id] = window.location.hash.slice(1).split("/");
+    if (route !== "log" || !id) return null;
+    try {
+      return decodeURIComponent(id);
+    } catch {
+      return null;
+    }
+  }
   async function load() {
     setError("");
     try {
@@ -71,7 +83,11 @@ function App() {
   }
   useEffect(() => {
     void load();
-    const route = () => setPage(getPage());
+    const route = () => {
+      setPage(getPage());
+      setLogExerciseId(getLogExerciseId());
+      window.scrollTo({ top: 0, behavior: "instant" });
+    };
     window.addEventListener("hashchange", route);
     const handler = (event: Event) => {
       event.preventDefault();
@@ -91,6 +107,7 @@ function App() {
   function navigate(next: Page) {
     window.location.hash = next;
     setPage(next);
+    setLogExerciseId(null);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
   useEffect(() => {
@@ -314,7 +331,11 @@ function App() {
               ) : page === "events" ? (
                 <Events />
               ) : page === "log" ? (
-                <TrainingLog key={member.id} member={member} />
+                <TrainingLog
+                  key={`${member.id}:${logExerciseId ?? "list"}`}
+                  member={member}
+                  initialExerciseId={logExerciseId}
+                />
               ) : (
                 <Messages />
               )}

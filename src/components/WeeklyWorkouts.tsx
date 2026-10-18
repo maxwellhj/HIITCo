@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card } from "./UI";
+import { StationCarousel } from "./StationCarousel";
 import { weeklyWorkoutPlan } from "../data/workoutPlan";
 import { formatDate, shiftDate } from "../domain/attendance";
 export function WeeklyWorkouts({ week }: { week: string }) {
@@ -22,31 +23,27 @@ export function WeeklyWorkouts({ week }: { week: string }) {
             key={w.id}
             aria-pressed={w.id === selected}
             aria-expanded={w.id === selected}
+            aria-controls="selected-workout-plan"
             onClick={() => setSelected(w.id === selected ? null : w.id)}
           >
             <span>{w.day}</span>
             <small>{formatDate(shiftDate(week, w.dayOffset))}</small>
-            <strong>{w.title}</strong>
-            <span className="workout-focus">{w.focus}</span>
-            <ChevronDown size={13} />
+            <ChevronDown size={14} />
           </button>
         ))}
       </div>
       {workout && (
-        <div className="workout-plan-detail" aria-live="polite">
+        <div className="workout-plan-detail" id="selected-workout-plan">
           <h3>
-            {workout.day} · {workout.title}
+            {workout.day}{" "}
+            <span>{formatDate(shiftDate(week, workout.dayOffset))}</span>
           </h3>
-          <ul>
-            {workout.details.map((detail) => (
-              <li key={detail}>{detail}</li>
-            ))}
-          </ul>
+          <StationCarousel key={workout.id} workout={workout} />
         </div>
       )}
       <p className="workout-plan-note">
-        Sample workouts for preview. Your club’s published plan will appear
-        here.
+        Sample station workouts for preview. Your club’s published plan will
+        appear here.
       </p>
     </Card>
   );
