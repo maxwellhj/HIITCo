@@ -2,13 +2,20 @@ import { describe, expect, it } from "vitest";
 import { weeklyWorkoutPlan } from "./workoutPlan";
 import { defaultExercises } from "../domain/training";
 describe("weekly station plan", () => {
-  it("provides Monday to Wednesday with nine distinct numbered three-minute stations per day", () => {
+  it("pairs repeated workouts across Monday to Saturday with nine three-minute stations per plan", () => {
     expect(weeklyWorkoutPlan.map((day) => day.day)).toEqual([
-      "Monday",
-      "Tuesday",
-      "Wednesday",
+      "Mon/Thurs",
+      "Tues/Fri",
+      "Wed/Sat",
     ]);
-    expect(weeklyWorkoutPlan.map((day) => day.dayOffset)).toEqual([0, 1, 2]);
+    expect(weeklyWorkoutPlan.map((day) => day.dayOffsets)).toEqual([
+      [0, 3],
+      [1, 4],
+      [2, 5],
+    ]);
+    expect(
+      weeklyWorkoutPlan.flatMap((day) => [...day.dayOffsets]).sort(),
+    ).toEqual([0, 1, 2, 3, 4, 5]);
     expect(new Set(weeklyWorkoutPlan.map((day) => day.id)).size).toBe(3);
     for (const day of weeklyWorkoutPlan) {
       expect(day.stations.map((s) => s.number)).toEqual([

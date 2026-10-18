@@ -27,7 +27,11 @@ export function WeeklyWorkouts({ week }: { week: string }) {
             onClick={() => setSelected(w.id === selected ? null : w.id)}
           >
             <span>{w.day}</span>
-            <small>{formatDate(shiftDate(week, w.dayOffset))}</small>
+            <small className="workout-paired-dates">
+              {w.dayOffsets.map((offset) => (
+                <span key={offset}>{formatDate(shiftDate(week, offset))}</span>
+              ))}
+            </small>
             <ChevronDown size={14} />
           </button>
         ))}
@@ -36,7 +40,11 @@ export function WeeklyWorkouts({ week }: { week: string }) {
         <div className="workout-plan-detail" id="selected-workout-plan">
           <h3>
             {workout.day}{" "}
-            <span>{formatDate(shiftDate(week, workout.dayOffset))}</span>
+            <span>
+              {workout.dayOffsets
+                .map((offset) => formatDate(shiftDate(week, offset)))
+                .join(" / ")}
+            </span>
           </h3>
           <StationCarousel key={workout.id} workout={workout} />
         </div>

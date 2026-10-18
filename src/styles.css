@@ -2645,19 +2645,26 @@ td > svg {
   scroll-snap-type: x mandatory;
   overscroll-behavior-x: contain;
   scrollbar-width: none;
-  border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fafcfd;
 }
 .station-track::-webkit-scrollbar {
   display: none;
 }
-.station-slide {
+.station-page {
   flex: 0 0 100%;
   min-width: 0;
-  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   scroll-snap-align: start;
   scroll-snap-stop: always;
+}
+.station-slide {
+  min-width: 0;
+  padding: 14px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafcfd;
 }
 .station-slide-heading {
   display: flex;
@@ -2718,7 +2725,7 @@ td > svg {
 }
 .station-picker {
   display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   margin-top: 13px;
 }
@@ -2752,5 +2759,84 @@ td > svg {
   }
   .station-slide li > p {
     font-size: 11px;
+  }
+}
+
+.workout-paired-dates {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.station-slide-heading {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+.station-slide-heading h4 {
+  font-size: 13px;
+}
+.station-slide-heading > span {
+  font-size: 9px;
+  padding: 4px 6px;
+}
+.station-slide ul {
+  margin-top: 12px;
+}
+.station-slide li > p {
+  font-size: 11px;
+  overflow-wrap: break-word;
+}
+.station-exercise-link {
+  gap: 4px;
+  min-height: 51px;
+}
+.station-exercise-link strong,
+.station-movement {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.station-movement {
+  display: flex;
+  align-items: center;
+  min-height: 51px;
+}
+.station-exercise-link svg {
+  width: 12px;
+  height: 12px;
+}
+@media (max-width: 760px) {
+  .station-page {
+    gap: 5px;
+  }
+  .station-slide {
+    padding: 11px 7px;
+  }
+  .station-slide-heading h4 {
+    font-size: 10px;
+  }
+  .station-slide-heading > span {
+    font-size: 8px;
+    padding: 4px 5px;
+  }
+  .station-exercise-link strong,
+  .station-slide li > .station-movement {
+    font-size: 10px;
+  }
+  .station-exercise-link {
+    gap: 3px;
+  }
+  .station-exercise-link svg {
+    width: 10px;
+    height: 10px;
+  }
+  .station-slide li > p {
+    font-size: 10px;
+    line-height: 1.7;
+  }
+  .workout-plan-detail > h3 {
+    font-size: 13px;
+  }
+  .workout-plan-detail > h3 > span {
+    font-size: 9px;
   }
 }

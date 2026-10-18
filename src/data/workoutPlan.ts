@@ -11,7 +11,7 @@ export interface WorkoutStation {
 }
 export interface PlannedWorkout {
   id: string;
-  dayOffset: 0 | 1 | 2;
+  dayOffsets: readonly [0 | 1 | 2, 3 | 4 | 5];
   day: string;
   stations: readonly WorkoutStation[];
 }
@@ -28,8 +28,8 @@ const station = (
 export const weeklyWorkoutPlan: readonly PlannedWorkout[] = [
   {
     id: "monday",
-    dayOffset: 0,
-    day: "Monday",
+    dayOffsets: [0, 3],
+    day: "Mon/Thurs",
     stations: [
       station(
         1,
@@ -94,8 +94,8 @@ export const weeklyWorkoutPlan: readonly PlannedWorkout[] = [
   },
   {
     id: "tuesday",
-    dayOffset: 1,
-    day: "Tuesday",
+    dayOffsets: [1, 4],
+    day: "Tues/Fri",
     stations: [
       station(
         1,
@@ -161,8 +161,8 @@ export const weeklyWorkoutPlan: readonly PlannedWorkout[] = [
   },
   {
     id: "wednesday",
-    dayOffset: 2,
-    day: "Wednesday",
+    dayOffsets: [2, 5],
+    day: "Wed/Sat",
     stations: [
       station(
         1,

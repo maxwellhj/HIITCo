@@ -2,13 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Clock, Pencil } from "lucide-react";
 import type { PlannedWorkout } from "../data/workoutPlan";
 
+const PER_PAGE = 3;
 export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
   const [active, setActive] = useState(0);
   const track = useRef<HTMLDivElement>(null),
     current = useRef(0);
   const count = workout.stations.length;
+  const pages = Array.from({ length: Math.ceil(count / PER_PAGE) }, (_, i) =>
+    workout.stations.slice(i * PER_PAGE, (i + 1) * PER_PAGE),
+  );
+  const range = (index: number) =>
+    `${pages[index][0].number}–${pages[index].at(-1)!.number}`;
   function goTo(index: number) {
-    const next = Math.max(0, Math.min(count - 1, index));
+    const next = Math.max(0, Math.min(pages.length - 1, index));
     current.current = next;
     setActive(next);
     track.current?.scrollTo({
@@ -41,20 +47,20 @@ export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
           <button
             type="button"
             className="icon-button"
-            aria-label="Previous station"
+            aria-label="Previous three stations"
             disabled={active === 0}
             onClick={() => goTo(active - 1)}
           >
             <ChevronLeft size={18} />
           </button>
           <span aria-live="polite">
-            {active + 1} / {count}
+            {range(active)} / {count}
           </span>
           <button
             type="button"
             className="icon-button"
-            aria-label="Next station"
-            disabled={active === count - 1}
+            aria-label="Next three stations"
+            disabled={active === pages.length - 1}
             onClick={() => goTo(active + 1)}
           >
             <ChevronRight size={18} />
@@ -76,73 +82,84 @@ export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
           }
         }}
         onScroll={(event) => {
-          const element = event.currentTarget;
-          if (!element.clientWidth) return;
+          const el = event.currentTarget;
+          if (!el.clientWidth) return;
           const index = Math.max(
             0,
             Math.min(
-              count - 1,
-              Math.round(element.scrollLeft / element.clientWidth),
+              pages.length - 1,
+              Math.round(el.scrollLeft / el.clientWidth),
             ),
           );
           current.current = index;
           setActive(index);
         }}
       >
-        {workout.stations.map((station, index) => (
-          <article
-            key={station.number}
-            className="station-slide"
-            aria-label={`Station ${station.number} of ${count}`}
-            aria-hidden={active !== index}
-            inert={active !== index}
+        {pages.map((stations, page) => (
+          <div
+            className="station-page"
+            key={stations[0].number}
+            role="group"
+            aria-label={`Stations ${range(page)}`}
+            aria-hidden={active !== page}
+            inert={active !== page}
           >
-            <div className="station-slide-heading">
-              <h4>Station {station.number}</h4>
-              <span>{station.durationMinutes} min</span>
-            </div>
-            <ul>
-              {station.exercises.map((exercise, i) => (
-                <li key={`${exercise.name}-${i}`}>
-                  {exercise.logExerciseId ? (
-                    <a
-                      className="station-exercise-link"
-                      href={`#log/${encodeURIComponent(exercise.logExerciseId)}`}
-                      aria-label={`Log ${exercise.name}`}
-                    >
-                      <strong>{exercise.name}</strong>
-                      <Pencil size={16} />
-                    </a>
-                  ) : (
-                    <strong>{exercise.name}</strong>
-                  )}
-                  <p>{exercise.instruction}</p>
-                  {exercise.logExerciseId && (
-                    <span className="station-log-hint">
-                      Tap the exercise to log weight, reps & sets.
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </article>
+            {stations.map((station) => (
+              <article
+                key={station.number}
+                className="station-slide"
+                aria-label={`Station ${station.number} of ${count}`}
+              >
+                <div className="station-slide-heading">
+                  <h4>Station {station.number}</h4>
+                  <span>{station.durationMinutes} min</span>
+                </div>
+                <ul>
+                  {station.exercises.map((exercise, i) => (
+                    <li key={`${exercise.name}-${i}`}>
+                      {exercise.logExerciseId ? (
+                        <a
+                          className="station-exercise-link"
+                          href={`#log/${encodeURIComponent(exercise.logExerciseId)}`}
+                          aria-label={`Log ${exercise.name}`}
+                        >
+                          <strong>{exercise.name}</strong>
+                          <Pencil size={13} />
+                        </a>
+                      ) : (
+                        <strong className="station-movement">
+                          {exercise.name}
+                        </strong>
+                      )}
+                      <p>{exercise.instruction}</p>
+                    </li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
         ))}
       </div>
-      <div className="station-picker" role="group" aria-label="Choose station">
-        {workout.stations.map((station, index) => (
+      <div
+        className="station-picker"
+        role="group"
+        aria-label="Choose station group"
+      >
+        {pages.map((stations, index) => (
           <button
-            key={station.number}
+            key={stations[0].number}
             type="button"
-            aria-label={`Station ${station.number}`}
+            aria-label={`Stations ${range(index)}`}
             aria-pressed={active === index}
             onClick={() => goTo(index)}
           >
-            {station.number}
+            {range(index)}
           </button>
         ))}
       </div>
       <p className="station-swipe-hint">
-        Swipe left or right to explore all 9 stations.
+        Swipe to see the next three stations. Tap underlined exercises to log
+        your sets.
       </p>
     </div>
   );
