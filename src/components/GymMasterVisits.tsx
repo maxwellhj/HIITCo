@@ -10,8 +10,16 @@ const errors: Record<string, string> = {
     "GymMaster’s attendance reply differs from the documentation. Please tell us GM-VISITS-FORMAT.",
   visits_not_available:
     "GymMaster couldn’t provide your visits. Please tell us GM-VISITS-UNAVAILABLE.",
+  connection_unavailable:
+    "The attendance connection isn’t ready. Please tell us GM-VISITS-SETUP.",
+  provider_redirect:
+    "GymMaster redirected the attendance request. Please tell us GM-VISITS-REDIRECT.",
+  provider_network_error:
+    "The app’s server couldn’t reach GymMaster’s attendance service. Please tell us GM-VISITS-NETWORK.",
+  request_not_allowed:
+    "The attendance request couldn’t be accepted. Please tell us GM-VISITS-REQUEST.",
   provider_timeout:
-    "GymMaster took too long to respond. Please try again in a minute.",
+    "GymMaster took too long to respond. Please tell us GM-VISITS-TIMEOUT.",
 };
 export function GymMasterVisits() {
   const [days, setDays] = useState<DailyVisits[] | null>(null);
@@ -32,10 +40,19 @@ export function GymMasterVisits() {
           redirect: "error",
           signal: controller.signal,
         });
+        if (!response.headers.get("Content-Type")?.includes("application/json"))
+          throw Error(
+            "The attendance service returned an unreadable reply. Please tell us GM-VISITS-RESPONSE.",
+          );
         const body = await response.json();
         if (!response.ok)
           throw Error(
-            errors[String(body?.error)] ??
+            (body?.error === "provider_http_error" &&
+            Number.isInteger(body.providerStatus) &&
+            body.providerStatus >= 400 &&
+            body.providerStatus <= 599
+              ? `GymMaster returned an attendance error. Please tell us GM-VISITS-HTTP-${body.providerStatus}.`
+              : errors[String(body?.error)]) ??
               "Couldn’t load your GymMaster visits. Please try again shortly.",
           );
         const rows = parseDailyVisits(body.days);
