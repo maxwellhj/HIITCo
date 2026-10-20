@@ -212,8 +212,7 @@ export async function gymMasterAuth(
     )
       return formatFailure("TOKEN");
     const expires = positiveInteger(result.expires);
-    if (!Number.isFinite(expires) || expires > 86400)
-      return formatFailure("EXPIRY");
+    if (!Number.isFinite(expires)) return formatFailure("EXPIRY");
     const memberId = positiveInteger(result.memberid);
     if (!Number.isFinite(memberId)) return formatFailure("MEMBER");
     const ttl = Math.min(expires, 3600);

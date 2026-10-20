@@ -110,12 +110,28 @@ describe("GymMaster connection-test login", () => {
     expect((await response.json()).connected).toBe(true);
     expect(response.headers.get("Set-Cookie")).toContain("HttpOnly");
   });
-  it("limits a long provider lifetime to one hour", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      good({ token: "token", expires: 86400, memberid: 42 }),
-    );
-    const response = await worker.fetch(post(), environment());
-    expect(response.headers.get("Set-Cookie")).toContain("Max-Age=3600");
+  it("caps documented lifetimes at one hour without rejecting longer provider lifetimes", async () => {
+    const provider = vi.spyOn(globalThis, "fetch");
+    for (const expires of [
+      30,
+      3600,
+      86400,
+      2592000,
+      "2592000",
+      Number.MAX_SAFE_INTEGER,
+    ]) {
+      provider.mockResolvedValueOnce(
+        good({ token: "token", expires, memberid: 42 }),
+      );
+      const response = await worker.fetch(post(), environment());
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Set-Cookie")).toContain(
+        `Max-Age=${Math.min(Number(expires), 3600)}`,
+      );
+      expect((await response.json()).expiresAt).toBeLessThanOrEqual(
+        Date.now() + 3600000,
+      );
+    }
   });
   it("rejects cross-origin or origin-less login and logout before contacting GymMaster", async () => {
     const upstream = vi
@@ -203,7 +219,9 @@ describe("GymMaster connection-test login", () => {
     const provider = vi.spyOn(globalThis, "fetch");
     for (const result of [
       { token: "token", expires: "3.6e3", memberid: 42 },
-      { token: "token", expires: 0, memberid: 42 },
+      ...[0, -1, null, true, 3.5, "", " 3600", Number.MAX_SAFE_INTEGER + 1].map(
+        (expires) => ({ token: "token", expires, memberid: 42 }),
+      ),
       { token: "token", expires: 3600, memberid: " 42" },
       { token: "", expires: 3600, memberid: 42 },
       { token: "x".repeat(2001), expires: 3600, memberid: 42 },
