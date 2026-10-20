@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Link2, LockKeyhole } from "lucide-react";
+import { GymMasterVisits } from "../components/GymMasterVisits";
 import { Card } from "../components/UI";
 import { formatDate } from "../domain/attendance";
 interface ConnectionStatus {
@@ -141,8 +142,8 @@ export function GymMasterConnection() {
             : "Connect your GymMaster account"}
         </h2>
         <p>
-          Connection test only. The app still shows fictional member profiles
-          and demo attendance.
+          Connection preview. Your real attendance appears here after sign-in.
+          The homepage and other tabs still show fictional demo data.
         </p>
         {error && (
           <p className="error" role="alert">
@@ -175,9 +176,10 @@ export function GymMasterConnection() {
               NZ time.
             </p>
             <p>
-              Live profile details and attendance will be connected after their
-              response formats are verified.
+              Profile details are still being prepared. Your GymMaster visits
+              are shown below.
             </p>
+            <GymMasterVisits />
             <button
               className="secondary"
               disabled={busy}

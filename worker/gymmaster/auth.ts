@@ -33,7 +33,7 @@ function failure(
 ) {
   return apiJson({ error: code }, status, headers);
 }
-async function limitedText(
+export async function limitedText(
   body: ReadableStream<Uint8Array> | null,
   maximum: number,
 ) {

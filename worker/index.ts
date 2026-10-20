@@ -1,4 +1,5 @@
 import { gymMasterAuth, type AuthEnv } from "./gymmaster/auth";
+import { gymMasterVisits } from "./gymmaster/visits";
 export interface Env extends AuthEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
 }
@@ -30,6 +31,8 @@ export default {
     }
     const authResponse = await gymMasterAuth(request, env);
     if (authResponse) return authResponse;
+    const visitsResponse = await gymMasterVisits(request, env);
+    if (visitsResponse) return visitsResponse;
     if (path === "/api/gymmaster" || path.startsWith("/api/gymmaster/")) {
       // No passthrough or real-member data until authenticated access is implemented.
       return json(

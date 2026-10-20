@@ -2917,3 +2917,10 @@ td > svg {
   background: #eff6f0;
   border-radius: 8px;
 }
+
+.gymmaster-visits { border-top: 1px solid var(--border, #dce0e4); margin: 24px 0; padding-top: 20px; }
+.live-visits-week { margin: 18px 0; }
+.live-visits-week h4 { margin-bottom: 8px; }
+.live-visits-week ul { list-style: none; padding: 0; margin: 0; }
+.live-visits-week li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eef0f2; font-size: 14px; }
+.live-visits-week strong { text-align: right; font-weight: 600; }

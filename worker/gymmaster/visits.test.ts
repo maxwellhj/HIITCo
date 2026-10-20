@@ -1,0 +1,163 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import worker, { type Env } from "../index";
+import { SESSION_COOKIE, sealSession } from "./session";
+import { dateKey, shiftDate, weekKey } from "../../src/domain/attendance";
+const secret = "test-only-api-key",
+  token = "test-only-member-token";
+const today = dateKey(new Date()),
+  start = shiftDate(weekKey(today), -14);
+const row = (date = today) => ({
+  date,
+  visits: 2,
+  watervisits: 1,
+  bookings: 3,
+});
+function env(): Env {
+  return {
+    GYMMASTER_API_KEY: secret,
+    LOGIN_RATE_LIMITER: { limit: vi.fn(async () => ({ success: true })) },
+    ASSETS: { fetch: vi.fn(async () => new Response("assets")) },
+  };
+}
+async function request(
+  path = "/api/gymmaster/visits",
+  options: RequestInit = {},
+) {
+  const cookie = await sealSession(
+    { token, memberId: 42, expiresAt: Date.now() + 60000 },
+    secret,
+  );
+  return new Request("https://example.test" + path, {
+    ...options,
+    headers: { Cookie: `${SESSION_COOKIE}=${cookie}`, ...options.headers },
+  });
+}
+afterEach(() => vi.restoreAllMocks());
+describe("authenticated daily visits", () => {
+  it("uses only the encrypted member session and returns filtered documented fields", async () => {
+    const network = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        Response.json({
+          result: [
+            { ...row(), private: secret },
+            row(start),
+            row(shiftDate(start, -1)),
+            row(shiftDate(today, 1)),
+          ],
+          error: "",
+        }),
+      );
+    const response = await worker.fetch(await request(), env());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toEqual({
+      days: [row(start), row()],
+      from: start,
+      through: today,
+    });
+    const [input, options] = network.mock.calls[0];
+    const url = new URL(String(input));
+    expect(url.origin + url.pathname).toBe(
+      "https://hiitco.gymmasteronline.com/portal/api/v2/member/visits/daily",
+    );
+    expect(url.searchParams.get("api_key")).toBe(secret);
+    expect(url.searchParams.get("token")).toBe(token);
+    expect(options?.redirect).toBe("manual");
+    expect(options?.method).toBe("GET");
+  });
+  it("blocks missing sessions, writes, cross-site access and caller-supplied identity before fetching", async () => {
+    const network = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(Error("should not run"));
+    expect(
+      (
+        await worker.fetch(
+          new Request("https://example.test/api/gymmaster/visits"),
+          env(),
+        )
+      ).status,
+    ).toBe(401);
+    expect(
+      (await worker.fetch(await request(undefined, { method: "POST" }), env()))
+        .status,
+    ).toBe(405);
+    expect(
+      (
+        await worker.fetch(
+          await request("/api/gymmaster/visits?memberid=123"),
+          env(),
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await worker.fetch(
+          await request(undefined, {
+            headers: { "Sec-Fetch-Site": "cross-site" },
+          }),
+          env(),
+        )
+      ).status,
+    ).toBe(400);
+    expect(network).not.toHaveBeenCalled();
+  });
+  it("fails closed when throttled and clears a rejected upstream session", async () => {
+    const network = vi.spyOn(globalThis, "fetch");
+    const config = env();
+    config.LOGIN_RATE_LIMITER!.limit = async () => ({ success: false });
+    expect((await worker.fetch(await request(), config)).status).toBe(429);
+    expect(network).not.toHaveBeenCalled();
+    network.mockResolvedValueOnce(new Response(secret, { status: 401 }));
+    const response = await worker.fetch(await request(), env());
+    expect(response.status).toBe(401);
+    expect(response.headers.get("Set-Cookie")).toContain("Max-Age=0");
+    expect(await response.json()).toEqual({ error: "session_expired" });
+  });
+  it("reports empty results without inventing zero visits", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json({ result: [] }),
+    );
+    const response = await worker.fetch(await request(), env());
+    expect(await response.json()).toEqual({
+      days: [],
+      from: start,
+      through: today,
+    });
+  });
+  it("rejects malformed responses, dates, duplicates and invalid counts without exposing payloads", async () => {
+    const network = vi.spyOn(globalThis, "fetch");
+    for (const result of [
+      null,
+      {},
+      [{ ...row(), date: "2026-02-30" }],
+      [{ ...row(), visits: -1 }],
+      [{ ...row(), visits: false }],
+      [{ ...row(), watervisits: 3 }],
+      [{ ...row(), bookings: 0.5 }],
+      [row(), row()],
+    ]) {
+      network.mockResolvedValueOnce(Response.json({ result, private: secret }));
+      const response = await worker.fetch(await request(), env());
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({ error: "visits_format" });
+    }
+    network.mockResolvedValueOnce(Response.json({ error: secret }));
+    expect(await (await worker.fetch(await request(), env())).json()).toEqual({
+      error: "visits_not_available",
+    });
+    network.mockResolvedValueOnce(
+      new Response(secret, {
+        status: 302,
+        headers: { Location: "https://other.test" },
+      }),
+    );
+    expect(await (await worker.fetch(await request(), env())).json()).toEqual({
+      error: "provider_redirect",
+    });
+    network.mockRejectedValueOnce(Error(secret));
+    expect(await (await worker.fetch(await request(), env())).json()).toEqual({
+      error: "provider_network_error",
+    });
+  });
+});
