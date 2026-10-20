@@ -11,6 +11,6 @@ export interface GymMasterGateway {
   getAttendance(internalMemberId: string): Promise<AttendanceEvent[]>;
 }
 export const integrationStatus = {
-  gymMaster: "not-connected",
+  gymMaster: "connection-test-only",
   supabase: "not-connected",
 } as const;

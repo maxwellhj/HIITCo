@@ -1,4 +1,4 @@
-import { ArrowRight, CalendarDays, Flame, Trophy } from "lucide-react";
+import { ArrowRight, CalendarDays, Flame, Link2, Trophy } from "lucide-react";
 import { BoxingGlove } from "../components/BoxingGlove";
 import { Bullseye } from "../components/Bullseye";
 import { AttendanceWeek } from "../components/AttendanceWeek";
@@ -110,6 +110,11 @@ export function HomePage({
           Skills Library<small>Box · Lift · Sweat</small>
         </span>
         <ArrowRight size={18} />
+      </a>
+      <a className="gymmaster-connect-link" href="#connect">
+        <Link2 size={16} />
+        Connect GymMaster <span>Connection test</span>
+        <ArrowRight size={15} />
       </a>
       <div className="home-details">
         <p>

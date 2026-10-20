@@ -24,7 +24,26 @@ Pushing to `main` triggers the configured Cloudflare build. A successful local d
 3. Enter the replacement **low-permission** API key from GymMaster. Save/deploy the change as prompted.
 4. Do not put the key in chat, GitHub, `wrangler.jsonc`, `.env.example`, frontend code, or any `VITE_` variable. Leave the high-permission staff key private and unused.
 
-This only makes a server-side secret available for a future integration. The current backend does not read or return it and does not make GymMaster requests. `/api/health` reports liveness only, never whether a credential exists. `/api/gymmaster` and its child routes return HTTP 501 (not connected); other unknown API paths return JSON 404 rather than the app shell. No member data, login flow, token storage or public proxy has been enabled. Real integration still requires secure member identity/session handling and verified response formats.
+## Verify a member connection
+
+After deploying, open `https://hiitco.maxwellhj.workers.dev/#connect` (also linked from Home as **Connect GymMaster**). Enter your own authorised GymMaster member email and password directly into that screen. Do not send those credentials through chat. A successful test displays **GymMaster sign-in verified**. The app continues to use fictional profiles and demo attendance: this is a connection test, not a live member-data rollout.
+
+The backend submits the documented `api_key`, `email`, and `password` fields as a form to the fixed club login URL. It verifies the documented `result.token`, `result.expires`, and `result.memberid` types. Provider error text is never sent back to the browser. The browser receives connected state and expiry only, not a token, member ID, password or API key. No member-ID-only login or arbitrary proxy is exposed.
+
+The temporary provider token and member ID are encrypted using AES-GCM in a `__Host-` cookie with HttpOnly, Secure, SameSite=Lax and Path=/ attributes. The cookie key is derived with a domain-separated SHA-256 digest of the server-held integration key. Replacing that key invalidates existing connection cookies. The lifetime follows GymMaster's documented expiry in seconds, capped at one hour. Disconnect clears the local connection cookie; it does not assume an undocumented GymMaster token-revocation endpoint. Passwords are forwarded for login only and are not persisted by this application or written to application logs. Private values must never be added to Cloudflare request/body logging.
+
+`wrangler.jsonc` configures a `LOGIN_RATE_LIMITER` Cloudflare binding (10 attempts per 60 seconds, applied to IP and hashed normalised email keys). This binding is installed with the Worker deployment; it requires no secret value. Login fails closed if the key, limiter or Cloudflare client-IP header is unavailable. Login/logout require a matching Origin and reject cross-site requests. The app refuses frames, and JSON API responses are uncached.
+
+Routes:
+
+- `GET /api/health`: public liveness only, no credential status.
+- `POST /api/gymmaster/login`: same-origin member connection test.
+- `GET /api/gymmaster/session`: connection state/expiry only; invalid and expired cookies are cleared.
+- `POST /api/gymmaster/logout`: same-origin disconnect.
+- Other `/api/gymmaster` routes: HTTP 501 until the relevant schemas and authorisation are implemented.
+- Other unknown `/api` routes: JSON 404, not the app shell.
+
+A real GymMaster sign-in has **not** been tested from the coding workspace. The key is stored in your Cloudflare project, not available here. Local tests use fake credentials and mocked provider responses. Next, verify one authorised member connection on the deployed site and obtain profile/visits response schemas. Exact check-in timestamps and historical coverage still require confirmation. Staff demo remains open and exposes fictional data only; it is not authorised staff access to real GymMaster information.
 
 ## Local validation
 

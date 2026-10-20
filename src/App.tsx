@@ -24,9 +24,17 @@ import { Staff } from "./pages/Staff";
 import { Skills } from "./pages/Skills";
 import { Events } from "./pages/Events";
 import { TrainingLog } from "./pages/TrainingLog";
+import { GymMasterConnection } from "./pages/GymMasterConnection";
 import { Messages } from "./pages/Messages";
 type Page =
-  "home" | "skills" | "events" | "log" | "progress" | "messages" | "staff";
+  | "home"
+  | "skills"
+  | "events"
+  | "log"
+  | "progress"
+  | "messages"
+  | "staff"
+  | "connect";
 type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: string }>;
@@ -60,6 +68,7 @@ function App() {
       "progress",
       "messages",
       "staff",
+      "connect",
     ].includes(route)
       ? (route as Page)
       : "home";
@@ -282,7 +291,9 @@ function App() {
                           ? "YOUR CLUB CALENDAR"
                           : page === "log"
                             ? "A LITTLE STRONGER, EVERY SESSION"
-                            : "YOUR CLUB CONNECTION"}
+                            : page === "connect"
+                              ? "MEMBER CONNECTION TEST"
+                              : "YOUR CLUB CONNECTION"}
                 </div>
                 <div className="heading-line">
                   <h1>
@@ -296,6 +307,8 @@ function App() {
                       "What’s on at HIIT Co."
                     ) : page === "log" ? (
                       "Your training log."
+                    ) : page === "connect" ? (
+                      "Connect GymMaster"
                     ) : (
                       "In your corner."
                     )}
@@ -319,7 +332,9 @@ function App() {
                           ? "Explore upcoming events and tap a date for the details."
                           : page === "log"
                             ? "Record your sets. Follow your progress. Build on your best."
-                            : "Updates, encouragement and good things from the HIIT Co. team."}
+                            : page === "connect"
+                              ? "Verify your sign-in while we prepare your member connection."
+                              : "Updates, encouragement and good things from the HIIT Co. team."}
                 </p>
               </div>
               {page === "home" ? (
@@ -336,6 +351,8 @@ function App() {
                   member={member}
                   initialExerciseId={logExerciseId}
                 />
+              ) : page === "connect" ? (
+                <GymMasterConnection />
               ) : (
                 <Messages />
               )}
@@ -346,20 +363,22 @@ function App() {
                     ? "Demo mode · Log entries saved on this device"
                     : "Fictional demo data · New Zealand time"}
                 </span>
-                <label>
-                  Viewing as{" "}
-                  <select
-                    aria-label="Demo member"
-                    value={memberId}
-                    onChange={(e) => setMemberId(e.target.value)}
-                  >
-                    {data.members.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.firstName} {m.lastName}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {page !== "connect" && (
+                  <label>
+                    Viewing as{" "}
+                    <select
+                      aria-label="Demo member"
+                      value={memberId}
+                      onChange={(e) => setMemberId(e.target.value)}
+                    >
+                      {data.members.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.firstName} {m.lastName}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
               </div>
             </>
           )}

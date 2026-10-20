@@ -1,7 +1,6 @@
-export interface Env {
+import { gymMasterAuth, type AuthEnv } from "./gymmaster/auth";
+export interface Env extends AuthEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
-  /** Set as an encrypted Cloudflare runtime secret, never a VITE_ build variable. */
-  GYMMASTER_API_KEY?: string;
 }
 
 function json(
@@ -29,6 +28,8 @@ export default {
       // Public liveness only. Never reveal secret values or credential status.
       return json({ status: "ok" });
     }
+    const authResponse = await gymMasterAuth(request, env);
+    if (authResponse) return authResponse;
     if (path === "/api/gymmaster" || path.startsWith("/api/gymmaster/")) {
       // No passthrough or real-member data until authenticated access is implemented.
       return json(

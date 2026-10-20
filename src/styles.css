@@ -2840,3 +2840,80 @@ td > svg {
     font-size: 9px;
   }
 }
+.gymmaster-connect-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  font-size: 11px;
+  margin: 12px 2px 0;
+}
+.gymmaster-connect-link > span {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 9px;
+}
+.gymmaster-connection {
+  max-width: 480px;
+  margin-inline: auto;
+}
+.connection-card {
+  margin-top: 15px;
+}
+.connection-card > h2 {
+  font-size: 23px;
+  margin: 22px 0 14px;
+}
+.connection-card > p {
+  font-size: 12px;
+}
+.connection-card form {
+  margin-top: 24px;
+  display: grid;
+  gap: 18px;
+}
+.connection-card label {
+  display: grid;
+  gap: 9px;
+  color: #505861;
+  font-size: 12px;
+}
+.connection-card input {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  font-size: 16px;
+  padding: 12px;
+  border: 1px solid #dce1e5;
+  border-radius: 7px;
+  background: #fff;
+  color: #17191c;
+}
+.connection-card .primary,
+.connection-card .secondary {
+  width: 100%;
+}
+.connection-privacy {
+  font-size: 10px;
+  line-height: 1.8;
+}
+.connection-loading {
+  margin-top: 22px;
+}
+.connection-success {
+  display: grid;
+  gap: 15px;
+  margin-top: 23px;
+}
+.connection-success p {
+  font-size: 12px;
+}
+.connection-success p[role="status"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #334d3b;
+  padding: 13px;
+  background: #eff6f0;
+  border-radius: 8px;
+}
