@@ -54,7 +54,17 @@ async function request(
       Number(result.providerStatus) >= 400 &&
       Number(result.providerStatus) <= 599
         ? `GymMaster returned an error. Please send us this message. (GM-HTTP-${result.providerStatus})`
-        : messages[String(result.error)]) ??
+        : result.error === "unexpected_response" &&
+            [
+              "ENVELOPE",
+              "RESULT",
+              "TOKEN",
+              "EXPIRY",
+              "MEMBER",
+              "BODY",
+            ].includes(String(result.detail))
+          ? `GymMaster’s reply didn’t match the expected format. Please send us this code: GM-FORMAT-${result.detail}.`
+          : messages[String(result.error)]) ??
         "We couldn’t complete the connection test. Please try again.",
     );
   if (

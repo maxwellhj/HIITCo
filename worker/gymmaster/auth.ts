@@ -66,6 +66,18 @@ async function limitedText(
 const sameOrigin = (request: Request) =>
   request.headers.get("Origin") === new URL(request.url).origin &&
   request.headers.get("Sec-Fetch-Site") !== "cross-site";
+// Accept integer fields encoded as either JSON numbers or decimal strings.
+// Reject coercions such as booleans, whitespace, fractions, and exponent strings.
+function positiveInteger(value: unknown): number {
+  if (typeof value === "string" && /^[1-9][0-9]{0,15}$/.test(value))
+    value = Number(value);
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? value
+    : NaN;
+}
+function formatFailure(detail: string) {
+  return apiJson({ error: "unexpected_response", detail }, 502);
+}
 export async function gymMasterAuth(
   request: Request,
   env: AuthEnv,
@@ -181,30 +193,34 @@ export async function gymMasterAuth(
       );
     stage = "response";
     const body: unknown = JSON.parse(await limitedText(upstream.body, 32768));
-    if (!body || typeof body !== "object")
-      return failure("unexpected_response", 502);
+    if (!body || typeof body !== "object" || Array.isArray(body))
+      return formatFailure("ENVELOPE");
     const response = body as Record<string, unknown>;
     if (typeof response.error === "string" && response.error.trim())
       return failure("sign_in_not_accepted", 401);
-    if (!response.result || typeof response.result !== "object")
-      return failure("unexpected_response", 502);
+    if (
+      !response.result ||
+      typeof response.result !== "object" ||
+      Array.isArray(response.result)
+    )
+      return formatFailure("RESULT");
     const result = response.result as Record<string, unknown>;
     if (
       typeof result.token !== "string" ||
       !result.token.trim() ||
-      result.token.length > 2000 ||
-      !Number.isSafeInteger(result.expires) ||
-      Number(result.expires) < 1 ||
-      Number(result.expires) > 86400 ||
-      !Number.isSafeInteger(result.memberid) ||
-      Number(result.memberid) < 1
+      result.token.length > 2000
     )
-      return failure("unexpected_response", 502);
-    const ttl = Math.min(Number(result.expires), 3600);
+      return formatFailure("TOKEN");
+    const expires = positiveInteger(result.expires);
+    if (!Number.isFinite(expires) || expires > 86400)
+      return formatFailure("EXPIRY");
+    const memberId = positiveInteger(result.memberid);
+    if (!Number.isFinite(memberId)) return formatFailure("MEMBER");
+    const ttl = Math.min(expires, 3600);
     const expiresAt = Date.now() + ttl * 1000;
     stage = "session";
     const sealed = await sealSession(
-      { token: result.token, memberId: Number(result.memberid), expiresAt },
+      { token: result.token, memberId, expiresAt },
       env.GYMMASTER_API_KEY,
     );
     return apiJson({ connected: true, expiresAt }, 200, {
@@ -217,9 +233,7 @@ export async function gymMasterAuth(
       ["TimeoutError", "AbortError"].includes(error.name)
     )
       return failure("provider_timeout", 504);
-    return failure(
-      stage === "response" ? "unexpected_response" : "provider_network_error",
-      502,
-    );
+    if (stage === "response") return formatFailure("BODY");
+    return failure("provider_network_error", 502);
   }
 }

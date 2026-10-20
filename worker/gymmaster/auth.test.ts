@@ -101,6 +101,15 @@ describe("GymMaster connection-test login", () => {
     expect(session?.memberId).toBe(42);
     expect(session?.token).toBe("test-only-provider-token");
   });
+  it("accepts bounded decimal strings for documented integer fields", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      good({ token: "token", expires: "3600", memberid: "42" }),
+    );
+    const response = await worker.fetch(post(), environment());
+    expect(response.status).toBe(200);
+    expect((await response.json()).connected).toBe(true);
+    expect(response.headers.get("Set-Cookie")).toContain("HttpOnly");
+  });
   it("limits a long provider lifetime to one hour", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       good({ token: "token", expires: 86400, memberid: 42 }),
@@ -193,9 +202,9 @@ describe("GymMaster connection-test login", () => {
   it("rejects undocumented or malformed result shapes instead of claiming a connection", async () => {
     const provider = vi.spyOn(globalThis, "fetch");
     for (const result of [
-      { token: "token", expires: "3600", memberid: 42 },
+      { token: "token", expires: "3.6e3", memberid: 42 },
       { token: "token", expires: 0, memberid: 42 },
-      { token: "token", expires: 3600, memberid: "42" },
+      { token: "token", expires: 3600, memberid: " 42" },
       { token: "", expires: 3600, memberid: 42 },
       { token: "x".repeat(2001), expires: 3600, memberid: 42 },
       {},
@@ -211,6 +220,25 @@ describe("GymMaster connection-test login", () => {
     const error = await worker.fetch(post(), environment());
     expect(error.status).toBe(502);
     expect(await error.text()).not.toContain(secret);
+  });
+  it("reports only an allowlisted format category, never the provider payload", async () => {
+    const provider = vi.spyOn(globalThis, "fetch");
+    for (const [body, detail] of [
+      [[], "ENVELOPE"],
+      [{ unexpected: secret }, "RESULT"],
+      [{ result: { token: null, private: secret } }, "TOKEN"],
+      [{ result: { token: secret, expires: false } }, "EXPIRY"],
+      [{ result: { token: secret, expires: 3600, memberid: true } }, "MEMBER"],
+    ] as const) {
+      provider.mockResolvedValueOnce(Response.json(body));
+      const response = await worker.fetch(post(), environment());
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({
+        error: "unexpected_response",
+        detail,
+      });
+      expect(response.headers.get("Set-Cookie")).toBeNull();
+    }
   });
   it("distinguishes safe diagnostic categories without following redirects or exposing provider data", async () => {
     const provider = vi.spyOn(globalThis, "fetch");
@@ -230,8 +258,14 @@ describe("GymMaster connection-test login", () => {
         new Response(secret, { status: 503 }),
         { error: "provider_http_error", providerStatus: 503 },
       ],
-      [new Response("<html>" + secret), { error: "unexpected_response" }],
-      [new Response("x".repeat(32769)), { error: "unexpected_response" }],
+      [
+        new Response("<html>" + secret),
+        { error: "unexpected_response", detail: "BODY" },
+      ],
+      [
+        new Response("x".repeat(32769)),
+        { error: "unexpected_response", detail: "BODY" },
+      ],
     ] as const) {
       provider.mockResolvedValueOnce(upstream);
       const response = await worker.fetch(post(), environment());
