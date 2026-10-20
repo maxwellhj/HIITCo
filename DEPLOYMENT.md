@@ -26,7 +26,7 @@ Pushing to `main` triggers the configured Cloudflare build. A successful local d
 
 ## Verify a member connection
 
-After deploying, open `https://hiitco.maxwellhj.workers.dev/#connect` (also linked from Home as **Connect GymMaster**). Enter your own authorised GymMaster member email and password directly into that screen. Do not send those credentials through chat. A successful test displays **GymMaster sign-in verified**. The connection screen additionally previews the name, total visits and recent daily visit counts for the signed-in account. The homepage and other tabs continue to use fictional profiles and demo attendance.
+After deploying, open `https://hiitco.maxwellhj.workers.dev/`. The default flow is member sign-in using their own authorised GymMaster email and password. A valid existing cookie restores their account. Sign-in opens a real Home dashboard with their name and total visits. `#connect` now opens account details; the avatar also links there. Home and Progress use real daily attendance when available, with explicit unavailable/partial states. The deployed attendance endpoint currently returns HTTP 400 and is awaiting GymMaster support; a working profile is not proof that attendance works. The fictional demo is separately selected from sign-in.
 
 The backend submits the documented `api_key`, `email`, and `password` fields as a form to the fixed club login URL. It verifies the documented `result.token`, `result.expires`, and `result.memberid` types. Provider error text is never sent back to the browser. The browser receives connected state and expiry only, not a token, member ID, password or API key. No member-ID-only login or arbitrary proxy is exposed.
 
@@ -37,15 +37,15 @@ The temporary provider token and member ID are encrypted using AES-GCM in a `__H
 Routes:
 
 - `GET /api/health`: public liveness only, no credential status.
-- `POST /api/gymmaster/login`: same-origin member connection test.
+- `POST /api/gymmaster/login`: same-origin member sign-in.
 - `GET /api/gymmaster/session`: connection state/expiry only; invalid and expired cookies are cleared.
 - `POST /api/gymmaster/logout`: same-origin disconnect.
 - `GET /api/gymmaster/profile`: encrypted-cookie authentication, fixed documented profile endpoint, member-ID match validation, first name/surname/total visits only. No-store responses, bounded body, per-member rate limit and no arbitrary query parameters. Missing total visits is unknown, not zero.
-- `GET /api/gymmaster/visits`: encrypted-cookie authentication, fixed upstream daily-visits endpoint, three NZ calendar weeks through today, documented fields only, no-store responses and per-member rate limits. Query parameters and cross-site requests are refused. Missing dates are not filled with zero; check-in times are not available. Provider failures never fall back to demo records.
+- `GET /api/gymmaster/visits`: encrypted-cookie authentication, fixed upstream daily-visits endpoint, three NZ calendar weeks through today plus a current-streak summary from all returned history, documented fields only, no-store responses and per-member rate limits. Query parameters and cross-site requests are refused. Missing dates are not filled with zero; check-in times are not available. Provider failures never fall back to demo records.
 - Other `/api/gymmaster` routes: HTTP 501 until the relevant schemas and authorisation are implemented.
 - Other unknown `/api` routes: JSON 404, not the app shell.
 
-A real GymMaster sign-in has **not** been tested from the coding workspace. The key is stored in your Cloudflare project, not available here. Local tests use fake credentials and mocked provider responses. The user has confirmed a successful sign-in on the deployed site. The daily-visits schema has been supplied and implemented; verify its attendance preview on the deployment next. The Member schema has now been supplied and implemented for name and total visits. Confirm these against the signed-in account on the deployed preview. Home and other tabs remain explicitly fictional demo data. Exact check-in timestamps and historical coverage still require confirmation. Staff demo remains open and exposes fictional data only; it is not authorised staff access to real GymMaster information.
+A real GymMaster sign-in has **not** been tested from the coding workspace. The key is stored in your Cloudflare project, not available here. Local tests use fake credentials and mocked provider responses. The user has confirmed a successful sign-in on the deployed site. The daily-visits schema has been supplied and implemented; verify its attendance preview on the deployment next. The Member schema has now been supplied and implemented for name and total visits. Confirm these against the signed-in account on the deployed preview. Member Home and Progress use authenticated data only. Club content and the separate demo remain labelled as sample data. Exact check-in timestamps and historical coverage still require confirmation. Staff demo remains open and exposes fictional data only; it is not authorised staff access to real GymMaster information.
 
 ## Local validation
 
@@ -70,3 +70,9 @@ The `dist` directory can still be uploaded to Pages or a static host to review t
 Connection troubleshooting: the login screen now distinguishes GM-NETWORK, GM-TIMEOUT, GM-REDIRECT, GM-HTTP (status only), GM-FORMAT, and GM-SESSION. Redirects are reported without following them; provider bodies, redirect locations, and credentials are never included in diagnostics. These categories identify the failing stage, not a confirmed root cause.
 
 Format diagnostics report only fixed categories (BODY, ENVELOPE, RESULT, TOKEN, EXPIRY, MEMBER), never response values or arbitrary property names. Login integer fields accept positive safe JSON integers or strictly decimal integer strings; provider lifetimes have no undocumented one-day limit, while local sessions remain capped at one hour (or the shorter provider lifetime). Live response compatibility still requires verification.
+
+## Member interface and session lifecycle
+
+The member shell stores profile and visits in memory only. Sign-out clears displayed state before the cookie-clearing request; failed sign-out reports an error and offers a retry instead of claiming success. Expiry removes the profile and asks for sign-in. Visibility changes and BroadcastChannel notifications revalidate the server session, clear stale state and prevent late requests from restoring previous account data. Cross-tab messages contain only a change notification. No member selector or real staff access is exposed in the member shell. API routes remain the authority for identity.
+
+The suggested goal is three visits per week. Streaks use confirmed consecutive attended weeks and show lower bounds where history is incomplete; missing dates are never assumed zero. Weekly attendance remains unavailable until the GymMaster daily-visits request succeeds. Real-account training log storage and saved targets are still pending; browser-local demo logs are not reused as member records.

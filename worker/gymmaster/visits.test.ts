@@ -35,19 +35,17 @@ async function request(
 afterEach(() => vi.restoreAllMocks());
 describe("authenticated daily visits", () => {
   it("uses only the encrypted member session and returns filtered documented fields", async () => {
-    const network = vi
-      .spyOn(globalThis, "fetch")
-      .mockResolvedValueOnce(
-        Response.json({
-          result: [
-            { ...row(), private: secret },
-            row(start),
-            row(shiftDate(start, -1)),
-            row(shiftDate(today, 1)),
-          ],
-          error: "",
-        }),
-      );
+    const network = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json({
+        result: [
+          { ...row(), private: secret },
+          row(start),
+          row(shiftDate(start, -1)),
+          row(shiftDate(today, 1)),
+        ],
+        error: "",
+      }),
+    );
     const response = await worker.fetch(await request(), env());
     expect(response.status).toBe(200);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
@@ -55,6 +53,7 @@ describe("authenticated daily visits", () => {
       days: [row(start), row()],
       from: start,
       through: today,
+      streak: { count: 1, exact: false },
     });
     const [input, options] = network.mock.calls[0];
     const url = new URL(String(input));
@@ -65,6 +64,21 @@ describe("authenticated daily visits", () => {
     expect(url.searchParams.get("token")).toBe(token);
     expect(options?.redirect).toBe("manual");
     expect(options?.method).toBe("GET");
+  });
+  it("calculates streaks using older returned history without exposing extra daily records", async () => {
+    const rows = Array.from({ length: 12 }, (_, i) =>
+      row(shiftDate(weekKey(today), -7 * i)),
+    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      Response.json({ result: rows }),
+    );
+    const response = await worker.fetch(await request(), env());
+    const data = await response.json();
+    expect(data.streak).toEqual({ count: 12, exact: false });
+    expect(data.days).toHaveLength(3);
+    expect(data.days.every((day: { date: string }) => day.date >= start)).toBe(
+      true,
+    );
   });
   it("blocks missing sessions, writes, cross-site access and caller-supplied identity before fetching", async () => {
     const network = vi
@@ -123,6 +137,7 @@ describe("authenticated daily visits", () => {
       days: [],
       from: start,
       through: today,
+      streak: { count: null, exact: false },
     });
   });
   it("rejects malformed responses, dates, duplicates and invalid counts without exposing payloads", async () => {

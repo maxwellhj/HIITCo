@@ -25,6 +25,7 @@ import { Skills } from "./pages/Skills";
 import { Events } from "./pages/Events";
 import { TrainingLog } from "./pages/TrainingLog";
 import { GymMasterConnection } from "./pages/GymMasterConnection";
+import { MemberApp } from "./member/MemberApp";
 import { Messages } from "./pages/Messages";
 type Page =
   | "home"
@@ -466,4 +467,24 @@ function App() {
     </div>
   );
 }
-export default App;
+export default function RootApp() {
+  const [demo, setDemo] = useState(false);
+  return demo ? (
+    <>
+      <div className="demo-mode-banner">
+        Fictional demo{" "}
+        <button
+          onClick={() => {
+            setDemo(false);
+            window.location.hash = "home";
+          }}
+        >
+          Back to member sign-in
+        </button>
+      </div>
+      <App />
+    </>
+  ) : (
+    <MemberApp onDemo={() => setDemo(true)} />
+  );
+}

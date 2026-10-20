@@ -2925,3 +2925,39 @@ td > svg {
 .live-visits-week li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eef0f2; font-size: 14px; }
 .live-visits-week strong { text-align: right; font-weight: 600; }
 .live-member-name { overflow-wrap: anywhere; }
+
+.member-login { max-width: 500px; margin: 40px auto; padding: 0 18px; }
+.member-login > .brand { margin: 0 auto 30px; }
+.member-login .card { padding: 28px; }
+.member-login h1 { font-size: 25px; margin: 20px 0 12px; }
+.member-login p { margin: 14px 0; line-height: 1.6; }
+.member-login form { display: grid; gap: 18px; margin: 24px 0; }
+.member-login label { display: grid; gap: 8px; font-size: 14px; }
+.member-login input { width: 100%; min-width: 0; }
+.member-login .secondary { margin-top: 14px; }
+.member-shell .heading-line h1 { overflow-wrap: anywhere; }
+.member-shell .main-shell { min-width: 0; }
+.member-shell .top-actions { gap: 14px; }
+.member-shell .sidebar > .text-button { margin-top: 20px; }
+.member-total { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding: 16px 20px; flex-wrap: wrap; }
+.member-total strong { font-size: 28px; margin-left: auto; }
+.member-total small { color: var(--muted); font-size: 11px; }
+.member-week-tabs { display: flex; gap: 6px; margin: 14px 0; }
+.member-week-tabs button { flex: 1; padding: 9px 5px; font-size: 12px; }
+.member-day-grid { display: grid; grid-template-columns: repeat(7,minmax(0,1fr)); gap: 5px; margin: 14px 0; }
+.member-day { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 2px; border: 1px solid var(--border); border-radius: 8px; background: #f8f9fa; color: var(--muted); font-size: 12px; }
+.member-day.attended { background: #edf5fc; color: #27618c; border-color: #a6c7e0; }
+.member-day:disabled { opacity: 0.5; }
+.member-visit-detail { margin-top: 12px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; }
+.member-visit-detail .icon-button { float: right; }
+.member-overview > .small { margin: 14px 0; line-height: 1.6; }
+.member-source { margin-top: 22px; line-height: 1.6; }
+.demo-mode-banner { position: sticky; top: 0; z-index: 100; padding: 10px; text-align: center; background: #eaf3fa; font-size: 13px; }
+.demo-mode-banner button { margin-left: 12px; text-decoration: underline; background: none; border: none; }
+@media (max-width: 500px) {
+  .member-total { gap: 8px; padding: 14px; }
+  .member-total small { flex-basis: 100%; }
+  .member-login .card { padding: 22px; }
+  .member-overview .home-attendance { padding: 14px 10px; }
+  .member-day { font-size: 10px; }
+}

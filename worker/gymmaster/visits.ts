@@ -2,6 +2,7 @@ import { apiJson, limitedText, type AuthEnv } from "./auth";
 import { clearSessionCookie, readSession } from "./session";
 import { parseDailyVisits } from "../../src/domain/gymmasterVisits";
 import { dateKey, shiftDate, weekKey } from "../../src/domain/attendance";
+import { memberStreak } from "../../src/member/attendance";
 export async function gymMasterVisits(
   request: Request,
   env: AuthEnv,
@@ -77,6 +78,7 @@ export async function gymMasterVisits(
       days: rows.filter((row) => row.date >= start && row.date <= today),
       from: start,
       through: today,
+      streak: memberStreak(rows),
     });
   } catch (error) {
     if (
