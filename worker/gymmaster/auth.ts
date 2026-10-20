@@ -151,11 +151,12 @@ export async function gymMasterAuth(
   } catch {
     return failure("connection_unavailable", 503);
   }
+  let stage: "request" | "response" | "session" = "request";
   try {
     // Fixed host/path and documented form fields. No member-ID impersonation or arbitrary proxy.
     const upstream = await fetch(LOGIN_URL, {
       method: "POST",
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(15000),
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -167,11 +168,18 @@ export async function gymMasterAuth(
         password,
       }),
     });
+    if (upstream.status >= 300 && upstream.status < 400)
+      return failure("provider_redirect", 502);
     if (upstream.status === 429)
       return failure("too_many_attempts", 429, { "Retry-After": "60" });
     if (upstream.status === 401 || upstream.status === 403)
       return failure("sign_in_not_accepted", 401);
-    if (!upstream.ok) return failure("provider_unavailable", 502);
+    if (!upstream.ok)
+      return apiJson(
+        { error: "provider_http_error", providerStatus: upstream.status },
+        502,
+      );
+    stage = "response";
     const body: unknown = JSON.parse(await limitedText(upstream.body, 32768));
     if (!body || typeof body !== "object")
       return failure("unexpected_response", 502);
@@ -194,6 +202,7 @@ export async function gymMasterAuth(
       return failure("unexpected_response", 502);
     const ttl = Math.min(Number(result.expires), 3600);
     const expiresAt = Date.now() + ttl * 1000;
+    stage = "session";
     const sealed = await sealSession(
       { token: result.token, memberId: Number(result.memberid), expiresAt },
       env.GYMMASTER_API_KEY,
@@ -201,7 +210,16 @@ export async function gymMasterAuth(
     return apiJson({ connected: true, expiresAt }, 200, {
       "Set-Cookie": sessionCookie(sealed, ttl),
     });
-  } catch {
-    return failure("provider_unavailable", 502);
+  } catch (error) {
+    if (stage === "session") return failure("session_unavailable", 503);
+    if (
+      error instanceof Error &&
+      ["TimeoutError", "AbortError"].includes(error.name)
+    )
+      return failure("provider_timeout", 504);
+    return failure(
+      stage === "response" ? "unexpected_response" : "provider_network_error",
+      502,
+    );
   }
 }

@@ -15,8 +15,16 @@ const messages: Record<string, string> = {
     "Too many sign-in attempts. Please wait a minute before trying again.",
   provider_unavailable:
     "GymMaster couldn’t be reached or didn’t complete the request. Please try again shortly.",
+  provider_redirect:
+    "GymMaster redirected the connection to another address. Please send us this message so we can check the correct address. (GM-REDIRECT)",
+  provider_timeout:
+    "GymMaster took too long to respond. Please try once more in a minute. If it happens again, send us this message. (GM-TIMEOUT)",
+  provider_network_error:
+    "Our server couldn’t establish a connection to GymMaster. Please send us this message. (GM-NETWORK)",
+  session_unavailable:
+    "GymMaster accepted your sign-in, but the app couldn’t create a secure session. Please send us this message. (GM-SESSION)",
   unexpected_response:
-    "GymMaster returned a format we couldn’t verify. Please tell us this message; don’t share your password.",
+    "GymMaster returned a format we couldn’t verify. Please send us this message. (GM-FORMAT)",
   invalid_request: "Please enter your GymMaster member email and password.",
 };
 async function request(
@@ -41,7 +49,12 @@ async function request(
   const result = data as Record<string, unknown>;
   if (!response.ok)
     throw Error(
-      messages[String(result.error)] ??
+      (result.error === "provider_http_error" &&
+      Number.isInteger(result.providerStatus) &&
+      Number(result.providerStatus) >= 400 &&
+      Number(result.providerStatus) <= 599
+        ? `GymMaster returned an error. Please send us this message. (GM-HTTP-${result.providerStatus})`
+        : messages[String(result.error)]) ??
         "We couldn’t complete the connection test. Please try again.",
     );
   if (

@@ -64,3 +64,5 @@ The public app-shell service worker excludes `/api` navigations. API responses u
 ## Static-only alternative
 
 The `dist` directory can still be uploaded to Pages or a static host to review the fictional demo. That upload excludes Worker code, cannot use runtime secrets, and cannot provide the GymMaster backend. Do not use that route for the live integration.
+
+Connection troubleshooting: the login screen now distinguishes GM-NETWORK, GM-TIMEOUT, GM-REDIRECT, GM-HTTP (status only), GM-FORMAT, and GM-SESSION. Redirects are reported without following them; provider bodies, redirect locations, and credentials are never included in diagnostics. These categories identify the failing stage, not a confirmed root cause.

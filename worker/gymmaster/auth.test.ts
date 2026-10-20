@@ -63,7 +63,7 @@ describe("GymMaster connection-test login", () => {
     expect(upstream).toHaveBeenCalledTimes(1);
     const [url, options] = upstream.mock.calls[0];
     expect(url).toBe("https://hiitco.gymmasteronline.com/portal/api/v1/login");
-    expect(options?.redirect).toBe("error");
+    expect(options?.redirect).toBe("manual");
     expect(options?.method).toBe("POST");
     const form = options?.body as URLSearchParams;
     expect(Object.fromEntries(form)).toEqual({
@@ -211,6 +211,43 @@ describe("GymMaster connection-test login", () => {
     const error = await worker.fetch(post(), environment());
     expect(error.status).toBe(502);
     expect(await error.text()).not.toContain(secret);
+  });
+  it("distinguishes safe diagnostic categories without following redirects or exposing provider data", async () => {
+    const provider = vi.spyOn(globalThis, "fetch");
+    for (const [upstream, expected] of [
+      [
+        new Response(secret, {
+          status: 302,
+          headers: { Location: "https://other.test/" + secret },
+        }),
+        { error: "provider_redirect" },
+      ],
+      [
+        new Response(secret, { status: 404 }),
+        { error: "provider_http_error", providerStatus: 404 },
+      ],
+      [
+        new Response(secret, { status: 503 }),
+        { error: "provider_http_error", providerStatus: 503 },
+      ],
+      [new Response("<html>" + secret), { error: "unexpected_response" }],
+      [new Response("x".repeat(32769)), { error: "unexpected_response" }],
+    ] as const) {
+      provider.mockResolvedValueOnce(upstream);
+      const response = await worker.fetch(post(), environment());
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual(expected);
+      expect(response.headers.get("Set-Cookie")).toBeNull();
+      expect(provider.mock.calls.at(-1)?.[1]?.redirect).toBe("manual");
+    }
+    provider.mockRejectedValueOnce(new DOMException(secret, "TimeoutError"));
+    const timeout = await worker.fetch(post(), environment());
+    expect(timeout.status).toBe(504);
+    expect(await timeout.json()).toEqual({ error: "provider_timeout" });
+    provider.mockRejectedValueOnce(new TypeError(secret));
+    expect(await (await worker.fetch(post(), environment())).json()).toEqual({
+      error: "provider_network_error",
+    });
   });
   it("disconnects with a cleared cookie and refuses methods not supported by each route", async () => {
     const response = await worker.fetch(
