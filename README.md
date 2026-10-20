@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-Run these commands from the repository root. Open the address Vite prints. `npm test` runs attendance and demo storage tests. `npm run build` checks TypeScript and builds the production PWA to `dist`. `npm run preview` serves that build. PWA service workers are generated for production builds; use HTTPS when deployed. Upload `dist` to Cloudflare Pages (build command `npm run build`, output directory `dist`). Hash navigation allows static hosting without server routes.
+Run these commands from the repository root. Open the address Vite prints. `npm test` runs attendance and demo storage tests. `npm run build` checks TypeScript and builds the production PWA to `dist`. `npm run preview` serves that build. PWA service workers are generated for production builds; use HTTPS when deployed. The existing Cloudflare Worker deploys the `dist` assets and `worker/index.ts` using `wrangler.jsonc`; see `DEPLOYMENT.md` for build/deploy commands and runtime secret setup. A static-only upload to Pages can preview the demo but does not include the backend. Hash navigation allows static hosting without server routes.
 
 ## Try the demo
 
@@ -51,6 +51,10 @@ The Events calendar replaces Skills in desktop and mobile navigation. It uses Mo
 ## Attendance rules
 
 Weeks run Monday–Sunday in Pacific/Auckland, including NZ daylight saving. A workout is a distinct attendance event, not an app login. Duplicate event IDs, invalid dates, future events and other members' visits are excluded. Multiple legitimate visits on one day count individually, with a single calendar indicator. A streak counts consecutive weeks with at least one visit; an empty current week does not break the preceding streak until that week has ended. Longest streak is shown only when history is complete. Milestones are 50, 75, 100, 150, 200, then every 100 visits. Goal percentages can exceed 100%; the circular indicator fills to 100%. The six-week chart's target line represents the current target, not reconstructed historical targets.
+
+## Backend foundation
+
+`worker/index.ts` serves the existing static app through its `ASSETS` binding and reserves uncached JSON routes under `/api`. `GET /api/health` returns only `{"status":"ok"}`. GymMaster routes remain disconnected (501), and unknown API routes return 404. The Worker does not read, expose or send any GymMaster key yet. No member authentication or live data integration is enabled. Adding this entry point lets the deployed Cloudflare Worker accept a `GYMMASTER_API_KEY` runtime **Secret**; assets-only Workers cannot hold runtime secrets. The key must never enter Vite build variables. Local Wrangler development and deployment checks are documented in `DEPLOYMENT.md`. A real cloud deployment and secret binding must be confirmed in Cloudflare separately.
 
 ## Before using real member data
 

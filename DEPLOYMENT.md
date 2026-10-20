@@ -1,34 +1,47 @@
-# Put the demo online with Cloudflare Pages
+# Deploy HIIT Co. Hub to Cloudflare Workers
 
-## Recommended: connect GitHub
+The existing `hiitco.maxwellhj.workers.dev` site is a **Cloudflare Worker**. The repository now includes `wrangler.jsonc` and `worker/index.ts` so this Worker serves the built app **and** can hold runtime secrets. An assets-only Worker cannot accept runtime variables or secrets.
 
-The app is available in `maxwellhj/HIITCo` on branch `main`. In Cloudflare, open Workers & Pages, create a **Pages** project and choose the option to import/connect a Git repository. Authorize the HIITCo repository and select it. Use:
+## Existing GitHub-connected project
 
+In Cloudflare → Workers & Pages → **hiitco** → Settings → Build, use:
+
+- Repository: `maxwellhj/HIITCo`
 - Production branch: `main`
-- Framework preset: Vite (or None if unavailable)
+- Root directory: repository root (leave blank)
 - Build command: `npm run build`
-- Build output directory: `dist`
-- Root directory: leave blank
+- Deploy command: `npm run deploy`
+- Node: 24, as pinned in `.node-version`
 
-Save and deploy. Cloudflare provides an HTTPS `pages.dev` URL. This app requires no API credentials. Future pushes to `main` automatically rebuild the site. The `.node-version` file selects Node 24 for compatible build environments.
+The tracked Wrangler configuration sets `name` to `hiitco`, `main` to `worker/index.ts`, and the static assets directory to `dist`. Use a Worker deployment, not `wrangler pages deploy` or an upload-only command. A deploy command of `npx wrangler deploy` also reads the tracked configuration correctly. If Cloudflare retains an old assets-only deployment, check that the newest build uses this commit and the tracked config at the repository root, then retry the deployment. Do not create another project or replace the existing URL merely to add a secret.
 
-## Alternative: direct upload
+Pushing to `main` triggers the configured Cloudflare build. A successful local dry run or Git push does not prove a cloud deployment succeeded. Wait for Cloudflare to report success. Then open `https://hiitco.maxwellhj.workers.dev/api/health`; it should return `{"status":"ok"}`. Use a private browser tab if an older installed app shell intercepts the address. Check that Home and the other hash routes still load.
 
+## Store the GymMaster key after the Worker code is deployed
 
-The app is a static website. A Pages Direct Upload project needs no GitHub connection, API keys, build settings or server. This demo contains fictional data and an openly accessible staff demonstration.
+1. Open the **hiitco** Worker → **Settings → Variables and Secrets** (runtime settings).
+2. Add a variable with **Type: Secret** and **Name: `GYMMASTER_API_KEY`**.
+3. Enter the replacement **low-permission** API key from GymMaster. Save/deploy the change as prompted.
+4. Do not put the key in chat, GitHub, `wrangler.jsonc`, `.env.example`, frontend code, or any `VITE_` variable. Leave the high-permission staff key private and unused.
 
-1. Sign in at https://dash.cloudflare.com/ (create an account if needed).
-2. Open **Workers & Pages**, choose **Create application**, and choose the **Pages / upload assets** option. Cloudflare may also show **Get started** under a Pages section, then **Drag and drop your files**.
-3. Create a Direct Upload project named `hiit-co-demo` (choose another name if unavailable).
-4. Upload the prepared `hiit-co-demo.zip`. It must contain `index.html` at the top level, rather than a parent `dist` folder. If the interface asks for a folder instead, unzip it and upload the contents.
-5. Click **Deploy site**. When Cloudflare reports success, open the HTTPS `pages.dev` address it provides.
-6. On your phone, check Home, Progress and Staff. In Staff, change Sarah's target, save it and return to Home. Changes are local to that browser; they do not sync across devices.
-7. On iPhone use Safari → Share → Add to Home Screen. On Android use the browser's Install app / Add to Home screen option.
+This only makes a server-side secret available for a future integration. The current backend does not read or return it and does not make GymMaster requests. `/api/health` reports liveness only, never whether a credential exists. `/api/gymmaster` and its child routes return HTTP 501 (not connected); other unknown API paths return JSON 404 rather than the app shell. No member data, login flow, token storage or public proxy has been enabled. Real integration still requires secure member identity/session handling and verified response formats.
 
-The exact menu labels can change. Choose a **Pages static upload**, rather than creating a Worker or connecting a repository. No custom domain or paid subscription is necessary to use the provided `pages.dev` address. Check any plan choice before accepting a paid option.
+## Local validation
 
-## Updating the demo
+From the repository root:
 
-Run `npm ci`, `npm test`, then `npm run build` from the project root. Upload the **contents** of `dist` as a new deployment in the same Pages project. Do not upload the source checkout, `.git` or `node_modules`. Keep `_headers`, `sw.js`, `registerSW.js`, manifest and icon files alongside the assets. The headers ask search engines not to index this demo, and allow browsers to recheck service-worker files. They do not restrict access: anyone with the URL can use the fictional demo. The current service worker may apply an updated version after the app's existing tabs have been closed and reopened.
+```sh
+npm ci
+npm run build
+npm test
+npm run deploy:check
+npm run dev:worker
+```
 
-If an upload fails, check that `index.html` is at the ZIP root and that you selected Pages. No live site or Cloudflare project has been created by generating this ZIP. After deployment, share the public URL in chat for a live check.
+`deploy:check` packages the Worker with Wrangler's `--dry-run`; it does not publish or require a real GymMaster key. `dev:worker` serves the production build and backend together locally, normally on port 8787. `npm run dev` still serves the frontend through Vite; it does not run Worker API routes. Never rely on a successful Vite preview to verify backend behaviour.
+
+The public app-shell service worker excludes `/api` navigations. API responses use `Cache-Control: no-store`, and static asset headers remain in `public/_headers`. Runtime credentials and authentication must never be added to app-shell caching.
+
+## Static-only alternative
+
+The `dist` directory can still be uploaded to Pages or a static host to review the fictional demo. That upload excludes Worker code, cannot use runtime secrets, and cannot provide the GymMaster backend. Do not use that route for the live integration.

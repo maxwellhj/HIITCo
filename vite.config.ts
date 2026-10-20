@@ -40,7 +40,10 @@ export default defineConfig({
           },
         ],
       },
-      workbox: { navigateFallback: "/index.html" },
+      workbox: {
+        navigateFallback: "/index.html",
+        navigateFallbackDenylist: [/^\/api(?:\/|$)/],
+      },
     }),
   ],
 });
