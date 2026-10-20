@@ -26,7 +26,7 @@ Pushing to `main` triggers the configured Cloudflare build. A successful local d
 
 ## Verify a member connection
 
-After deploying, open `https://hiitco.maxwellhj.workers.dev/#connect` (also linked from Home as **Connect GymMaster**). Enter your own authorised GymMaster member email and password directly into that screen. Do not send those credentials through chat. A successful test displays **GymMaster sign-in verified**. The connection screen additionally previews real daily visit counts for the signed-in account. The homepage and other tabs continue to use fictional profiles and demo attendance.
+After deploying, open `https://hiitco.maxwellhj.workers.dev/#connect` (also linked from Home as **Connect GymMaster**). Enter your own authorised GymMaster member email and password directly into that screen. Do not send those credentials through chat. A successful test displays **GymMaster sign-in verified**. The connection screen additionally previews the name, total visits and recent daily visit counts for the signed-in account. The homepage and other tabs continue to use fictional profiles and demo attendance.
 
 The backend submits the documented `api_key`, `email`, and `password` fields as a form to the fixed club login URL. It verifies the documented `result.token`, `result.expires`, and `result.memberid` types. Provider error text is never sent back to the browser. The browser receives connected state and expiry only, not a token, member ID, password or API key. No member-ID-only login or arbitrary proxy is exposed.
 
@@ -40,11 +40,12 @@ Routes:
 - `POST /api/gymmaster/login`: same-origin member connection test.
 - `GET /api/gymmaster/session`: connection state/expiry only; invalid and expired cookies are cleared.
 - `POST /api/gymmaster/logout`: same-origin disconnect.
+- `GET /api/gymmaster/profile`: encrypted-cookie authentication, fixed documented profile endpoint, member-ID match validation, first name/surname/total visits only. No-store responses, bounded body, per-member rate limit and no arbitrary query parameters. Missing total visits is unknown, not zero.
 - `GET /api/gymmaster/visits`: encrypted-cookie authentication, fixed upstream daily-visits endpoint, three NZ calendar weeks through today, documented fields only, no-store responses and per-member rate limits. Query parameters and cross-site requests are refused. Missing dates are not filled with zero; check-in times are not available. Provider failures never fall back to demo records.
 - Other `/api/gymmaster` routes: HTTP 501 until the relevant schemas and authorisation are implemented.
 - Other unknown `/api` routes: JSON 404, not the app shell.
 
-A real GymMaster sign-in has **not** been tested from the coding workspace. The key is stored in your Cloudflare project, not available here. Local tests use fake credentials and mocked provider responses. The user has confirmed a successful sign-in on the deployed site. The daily-visits schema has been supplied and implemented; verify its attendance preview on the deployment next. The profile Member schema is still required. Exact check-in timestamps and historical coverage still require confirmation. Staff demo remains open and exposes fictional data only; it is not authorised staff access to real GymMaster information.
+A real GymMaster sign-in has **not** been tested from the coding workspace. The key is stored in your Cloudflare project, not available here. Local tests use fake credentials and mocked provider responses. The user has confirmed a successful sign-in on the deployed site. The daily-visits schema has been supplied and implemented; verify its attendance preview on the deployment next. The Member schema has now been supplied and implemented for name and total visits. Confirm these against the signed-in account on the deployed preview. Home and other tabs remain explicitly fictional demo data. Exact check-in timestamps and historical coverage still require confirmation. Staff demo remains open and exposes fictional data only; it is not authorised staff access to real GymMaster information.
 
 ## Local validation
 

@@ -1,5 +1,6 @@
 import { gymMasterAuth, type AuthEnv } from "./gymmaster/auth";
 import { gymMasterVisits } from "./gymmaster/visits";
+import { gymMasterProfile } from "./gymmaster/profile";
 export interface Env extends AuthEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
 }
@@ -31,10 +32,12 @@ export default {
     }
     const authResponse = await gymMasterAuth(request, env);
     if (authResponse) return authResponse;
+    const profileResponse = await gymMasterProfile(request, env);
+    if (profileResponse) return profileResponse;
     const visitsResponse = await gymMasterVisits(request, env);
     if (visitsResponse) return visitsResponse;
     if (path === "/api/gymmaster" || path.startsWith("/api/gymmaster/")) {
-      // No passthrough or real-member data until authenticated access is implemented.
+      // Undocumented routes remain disabled; never expose an arbitrary provider proxy.
       return json(
         { error: "GymMaster integration is not connected yet." },
         501,

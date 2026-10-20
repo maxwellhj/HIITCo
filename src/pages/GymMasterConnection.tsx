@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Link2, LockKeyhole } from "lucide-react";
+import { GymMasterProfile } from "../components/GymMasterProfile";
 import { GymMasterVisits } from "../components/GymMasterVisits";
 import { Card } from "../components/UI";
 import { formatDate } from "../domain/attendance";
@@ -142,8 +143,8 @@ export function GymMasterConnection() {
             : "Connect your GymMaster account"}
         </h2>
         <p>
-          Connection preview. Your real attendance appears here after sign-in.
-          The homepage and other tabs still show fictional demo data.
+          Connection preview. Your real profile and attendance appear here after
+          sign-in. The homepage and other tabs still show fictional demo data.
         </p>
         {error && (
           <p className="error" role="alert">
@@ -176,9 +177,10 @@ export function GymMasterConnection() {
               NZ time.
             </p>
             <p>
-              Profile details are still being prepared. Your GymMaster visits
-              are shown below.
+              Your profile and visits below belong to your signed-in GymMaster
+              account.
             </p>
+            <GymMasterProfile />
             <GymMasterVisits />
             <button
               className="secondary"
