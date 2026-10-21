@@ -114,6 +114,90 @@ describe("authenticated daily visits", () => {
       true,
     );
   });
+  it("loads older pages for exact streaks of 53, 54, 55 and 105 weeks", async () => {
+    const network = vi.spyOn(globalThis, "fetch");
+    for (const count of [53, 54, 55, 105]) {
+      network.mockClear();
+      const monday = weekKey(today);
+      const breakWeek = shiftDate(monday, -7 * count);
+      const history = [
+        ...Array.from({ length: count }, (_, i) =>
+          row(shiftDate(monday, -7 * i)),
+        ),
+        ...Array.from({ length: 7 }, (_, i) => ({
+          ...row(shiftDate(breakWeek, i)),
+          visits: 0,
+          watervisits: 0,
+        })),
+      ];
+      network.mockImplementation(async (input) => {
+        const query = new URL(String(input)).searchParams;
+        return Response.json({
+          result: history.filter(
+            (day) =>
+              day.date >= query.get("startdate")! &&
+              day.date <= query.get("enddate")!,
+          ),
+        });
+      });
+      const response = await worker.fetch(await request(), env());
+      expect(response.status).toBe(200);
+      const data = await response.json();
+      expect(data.streak).toEqual({ count, exact: true });
+      expect(data.days).toHaveLength(3);
+      expect(network).toHaveBeenCalledTimes(count > 104 ? 3 : 2);
+      for (let i = 1; i < network.mock.calls.length; i++) {
+        const previous = new URL(String(network.mock.calls[i - 1][0]))
+          .searchParams;
+        const current = new URL(String(network.mock.calls[i][0])).searchParams;
+        expect(current.get("enddate")).toBe(
+          shiftDate(previous.get("startdate")!, -1),
+        );
+      }
+    }
+  });
+  it("extends a previous-week streak when the current week has not been attended", async () => {
+    const monday = weekKey(today);
+    const history = Array.from({ length: 55 }, (_, i) =>
+      row(shiftDate(monday, -7 * (i + 1))),
+    );
+    const network = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const query = new URL(String(input)).searchParams;
+        return Response.json({
+          result: history.filter(
+            (day) =>
+              day.date >= query.get("startdate")! &&
+              day.date <= query.get("enddate")!,
+          ),
+        });
+      });
+    const response = await worker.fetch(await request(), env());
+    expect((await response.json()).streak).toEqual({ count: 55, exact: false });
+    expect(network).toHaveBeenCalledTimes(2);
+  });
+  it("retains confirmed recent attendance if an older page fails, but respects session expiry", async () => {
+    const history = Array.from({ length: 52 }, (_, i) =>
+      row(shiftDate(weekKey(today), -7 * i)),
+    );
+    const network = vi.spyOn(globalThis, "fetch");
+    network
+      .mockResolvedValueOnce(Response.json({ result: history }))
+      .mockResolvedValueOnce(new Response(secret, { status: 500 }));
+    const response = await worker.fetch(await request(), env());
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(data.days).toHaveLength(3);
+    expect(data.streak).toEqual({ count: 52, exact: false });
+    expect(JSON.stringify(data)).not.toContain(secret);
+    network
+      .mockResolvedValueOnce(Response.json({ result: history }))
+      .mockResolvedValueOnce(new Response(secret, { status: 401 }));
+    const expired = await worker.fetch(await request(), env());
+    expect(expired.status).toBe(401);
+    expect(expired.headers.get("Set-Cookie")).toContain("Max-Age=0");
+  });
   it("blocks missing sessions, writes, cross-site access and caller-supplied identity before fetching", async () => {
     const network = vi
       .spyOn(globalThis, "fetch")
