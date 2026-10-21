@@ -10,26 +10,34 @@ interface WebhookEnvelope {
   event_id: string | number;
   event_type: string;
   event_timestamp: string;
-  processed_at: string;
+  processed_at: string | null;
   payload: Record<string, unknown>;
   test_webhook?: boolean;
 }
 function validTimestamp(value: unknown): value is string {
   if (
     typeof value !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::?\d{2})?)$/.test(
+    !/^\d{4}-\d{2}-\d{2}[T ](?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/.test(
       value,
     )
   )
     return false;
-  // GymMaster's help example uses +12 rather than +12:00.
-  const normalized = /[+-]\d{2}$/.test(value) ? value + ":00" : value;
+  // Preserve timezone-less values exactly. Appending Z here validates syntax
+  // only; it must not be used to infer the actual timezone of a check-in.
+  let normalized = value.replace(" ", "T");
+  if (/[+-]\d{2}$/.test(normalized)) normalized += ":00";
+  else if (!/(?:Z|[+-]\d{2}:?\d{2})$/.test(normalized)) normalized += "Z";
   const date = new Date(value.slice(0, 10) + "T12:00:00Z");
   return (
     Number.isFinite(Date.parse(normalized)) &&
     Number.isFinite(date.getTime()) &&
     date.toISOString().slice(0, 10) === value.slice(0, 10)
   );
+}
+function unavailable(code: string) {
+  // Fixed diagnostic labels only. Never log exception messages, tokens or bodies.
+  console.error(code);
+  return apiJson({ error: "webhook_unavailable", code }, 503);
 }
 function envelope(value: unknown): WebhookEnvelope {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -46,7 +54,7 @@ function envelope(value: unknown): WebhookEnvelope {
     typeof v.event_type !== "string" ||
     !/^[A-Za-z][A-Za-z0-9_.:-]{0,79}$/.test(v.event_type) ||
     !validTimestamp(v.event_timestamp) ||
-    !validTimestamp(v.processed_at) ||
+    (v.processed_at !== null && !validTimestamp(v.processed_at)) ||
     !v.payload ||
     typeof v.payload !== "object" ||
     Array.isArray(v.payload)
@@ -100,12 +108,12 @@ export async function gymMasterWebhook(
     return null;
   if (request.method !== "POST")
     return apiJson({ error: "method_not_allowed" }, 405, { Allow: "POST" });
-  if (
-    !env.GYMMASTER_WEBHOOK_TOKEN ||
-    !/^[\x21-\x7e]{32,256}$/.test(env.GYMMASTER_WEBHOOK_TOKEN) ||
-    !env.GYMMASTER_CHECKIN_INBOX
-  )
-    return apiJson({ error: "webhook_unavailable" }, 503);
+  if (!env.GYMMASTER_WEBHOOK_TOKEN)
+    return unavailable("GM-WEBHOOK-TOKEN-MISSING");
+  if (!/^[\x21-\x7e]{32,256}$/.test(env.GYMMASTER_WEBHOOK_TOKEN))
+    return unavailable("GM-WEBHOOK-TOKEN-FORMAT");
+  if (!env.GYMMASTER_CHECKIN_INBOX)
+    return unavailable("GM-WEBHOOK-INBOX-MISSING");
   if (
     !(await equalToken(
       request.headers.get("X-Gymmaster-Token") ?? "",
@@ -123,12 +131,18 @@ export async function gymMasterWebhook(
   try {
     event = envelope(JSON.parse(await limitedText(request.body, 32768)));
   } catch {
-    return apiJson({ error: "invalid_webhook" }, 400);
+    console.warn("GM-WEBHOOK-FORMAT");
+    return apiJson(
+      { error: "invalid_webhook", code: "GM-WEBHOOK-FORMAT" },
+      400,
+    );
   }
   const test =
     event.test_webhook === true || event.payload.test_webhook === true;
+  let stage = "GM-WEBHOOK-ENCRYPTION";
   try {
     const sealed = await sealEnvelope(event, env.GYMMASTER_WEBHOOK_TOKEN);
+    stage = "GM-WEBHOOK-STORAGE";
     const inbox = env.GYMMASTER_CHECKIN_INBOX.get(
       env.GYMMASTER_CHECKIN_INBOX.idFromName("hiitco-checkin-inbox-v1"),
     );
@@ -142,7 +156,23 @@ export async function gymMasterWebhook(
         }),
       }),
     );
-    if (!stored.ok) throw Error();
+    if (!stored.ok) {
+      try {
+        const failure = (await stored.json()) as { code?: unknown };
+        if (
+          [
+            "GM-WEBHOOK-INBOX-BODY",
+            "GM-WEBHOOK-INBOX-WRITE",
+            "GM-WEBHOOK-INBOX-ALARM",
+          ].includes(String(failure.code))
+        )
+          return unavailable(String(failure.code));
+      } catch {
+        /* Use the generic storage diagnostic. */
+      }
+      return unavailable(stage);
+    }
+    stage = "GM-WEBHOOK-ACK";
     const result = (await stored.json()) as {
       received?: unknown;
       duplicate?: unknown;
@@ -169,6 +199,6 @@ export async function gymMasterWebhook(
     });
     return apiJson({ received: true, duplicate: result.duplicate, test });
   } catch {
-    return apiJson({ error: "webhook_unavailable" }, 503);
+    return unavailable(stage);
   }
 }

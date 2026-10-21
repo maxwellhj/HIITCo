@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker, { type Env } from "../index";
 const secret = "test-only-webhook-token-0123456789abcdef";
 const event = {
@@ -33,6 +33,10 @@ function config() {
   };
   return { env, store };
 }
+beforeEach(() => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+});
 afterEach(() => vi.restoreAllMocks());
 describe("GymMaster webhook receiver", () => {
   it("authenticates the header, durably stores an encrypted envelope and logs only schema metadata", async () => {
@@ -75,6 +79,87 @@ describe("GymMaster webhook receiver", () => {
     expect(logs).not.toContain(secret);
     expect(logs).not.toContain(event.payload.private_field);
     expect(logs).not.toContain("9226");
+  });
+  it("accepts the observed Member Checkin test format without inventing a timezone or processed time", async () => {
+    vi.spyOn(console, "info").mockImplementation(() => {});
+    const { env, store } = config();
+    const actualShape = {
+      event_id: 46238,
+      event_type: "member_checkin",
+      event_timestamp: "2026-10-22T07:09:24.906388",
+      processed_at: null,
+      payload: {
+        id: 123,
+        access: "granted",
+        cardno: null,
+        doorid: 1,
+        origin: "staff",
+        source: "manual check in",
+        comment: null,
+        doorname: "Reception",
+        memberid: 42,
+        bookingid: null,
+        timestamp: "2026-10-22 06:47:30.172346",
+        membername: "Example Member",
+        booking_name: null,
+        membershipid: 100,
+        test_webhook: true,
+        membershipname: "Example membership",
+        booking_checkin: false,
+        booking_parentid: null,
+      },
+    };
+    const response = await worker.fetch(request(actualShape), env);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      received: true,
+      duplicate: false,
+      test: true,
+    });
+    expect((await store.mock.calls[0][0].json()).key).toBe("test:46238");
+    expect(JSON.stringify(vi.mocked(console.info).mock.calls)).not.toContain(
+      "Example Member",
+    );
+  });
+  it("returns only fixed diagnostic codes for configuration and inbox failures", async () => {
+    const { env, store } = config();
+    expect(
+      (
+        await (
+          await worker.fetch(request(), {
+            ...env,
+            GYMMASTER_WEBHOOK_TOKEN: "short",
+          })
+        ).json()
+      ).code,
+    ).toBe("GM-WEBHOOK-TOKEN-FORMAT");
+    expect(
+      (
+        await (
+          await worker.fetch(request(), {
+            ...env,
+            GYMMASTER_CHECKIN_INBOX: undefined,
+          })
+        ).json()
+      ).code,
+    ).toBe("GM-WEBHOOK-INBOX-MISSING");
+    store.mockResolvedValueOnce(
+      Response.json({ code: "GM-WEBHOOK-INBOX-WRITE" }, { status: 503 }),
+    );
+    expect((await (await worker.fetch(request(), env)).json()).code).toBe(
+      "GM-WEBHOOK-INBOX-WRITE",
+    );
+    store.mockResolvedValueOnce(
+      Response.json({ code: secret }, { status: 503 }),
+    );
+    const response = await worker.fetch(request(), env);
+    expect(await response.json()).toEqual({
+      error: "webhook_unavailable",
+      code: "GM-WEBHOOK-STORAGE",
+    });
+    expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(
+      secret,
+    );
   });
   it("keeps test events separate and acknowledges a duplicate without inventing a visit", async () => {
     vi.spyOn(console, "info").mockImplementation(() => {});
@@ -139,6 +224,9 @@ describe("GymMaster webhook receiver", () => {
     store.mockRejectedValueOnce(Error(secret));
     const response = await worker.fetch(request(), env);
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: "webhook_unavailable" });
+    expect(await response.json()).toEqual({
+      error: "webhook_unavailable",
+      code: "GM-WEBHOOK-STORAGE",
+    });
   });
 });

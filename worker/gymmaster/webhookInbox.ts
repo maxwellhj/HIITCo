@@ -28,6 +28,7 @@ export class GymMasterCheckinInbox {
   async fetch(request: Request) {
     if (request.method !== "POST" || new URL(request.url).pathname !== "/store")
       return apiJson({ error: "not_found" }, 404);
+    let stage = "GM-WEBHOOK-INBOX-BODY";
     try {
       const value: unknown = JSON.parse(await limitedText(request.body, 65536));
       if (!value || typeof value !== "object") throw Error();
@@ -41,6 +42,7 @@ export class GymMasterCheckinInbox {
       )
         throw Error();
       // Unique IDs make delivery retries idempotent; test records use a separate namespace.
+      stage = "GM-WEBHOOK-INBOX-WRITE";
       this.state.storage.sql.exec(
         "INSERT OR IGNORE INTO pending_webhooks(event_key,sealed_event,expires_at) VALUES (?,?,?)",
         key,
@@ -50,11 +52,12 @@ export class GymMasterCheckinInbox {
       const { changed } = this.state.storage.sql
         .exec<{ changed: number }>("SELECT changes() AS changed")
         .one();
+      stage = "GM-WEBHOOK-INBOX-ALARM";
       if ((await this.state.storage.getAlarm()) === null)
         await this.state.storage.setAlarm(Date.now() + 3600000);
       return apiJson({ received: true, duplicate: changed === 0 });
     } catch {
-      return apiJson({ error: "storage_unavailable" }, 503);
+      return apiJson({ error: "storage_unavailable", code: stage }, 503);
     }
   }
   async alarm() {
