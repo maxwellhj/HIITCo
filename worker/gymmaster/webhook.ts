@@ -105,6 +105,32 @@ async function sealEnvelope(value: WebhookEnvelope, secret: string) {
   bytes.set(new Uint8Array(ciphertext), 12);
   return btoa(String.fromCharCode(...bytes));
 }
+/** Re-read retained authenticated envelopes when a mapper learns a new format. */
+export async function openEnvelope(
+  sealed: string,
+  secret: string,
+): Promise<unknown> {
+  if (sealed.length > 50000 || !/^[A-Za-z0-9+/]+=*$/.test(sealed))
+    throw Error();
+  const material = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`hiitco.webhook.inbox-key.v1:${secret}`),
+  );
+  const key = await crypto.subtle.importKey("raw", material, "AES-GCM", false, [
+    "decrypt",
+  ]);
+  const bytes = Uint8Array.from(atob(sealed), (c) => c.charCodeAt(0));
+  const plain = await crypto.subtle.decrypt(
+    {
+      name: "AES-GCM",
+      iv: bytes.slice(0, 12),
+      additionalData: new TextEncoder().encode("hiitco.webhook.inbox.v1"),
+    },
+    key,
+    bytes.slice(12),
+  );
+  return JSON.parse(new TextDecoder().decode(plain));
+}
 export async function gymMasterWebhook(
   request: Request,
   env: WebhookEnv,
@@ -206,6 +232,15 @@ export async function gymMasterWebhook(
     console.info("GymMaster webhook received", {
       test,
       duplicate: result.duplicate,
+      checkin: test
+        ? "test-excluded"
+        : mapped
+          ? "mapped"
+          : event.event_type !== "member_checkin"
+            ? "event-excluded"
+            : event.payload.access !== "granted"
+              ? "access-excluded"
+              : "record-format-excluded",
       eventType: event.event_type,
       payloadFields: Object.keys(event.payload)
         .filter((name) => /^[A-Za-z][A-Za-z0-9_]{0,49}$/.test(name))

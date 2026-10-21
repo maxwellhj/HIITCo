@@ -6,6 +6,39 @@ function id(value: unknown): number | null {
     ? value
     : null;
 }
+/** Naive values are NZ wall time; explicitly zoned ISO values are converted to NZ. */
+export function nzCheckinTimestamp(value: unknown): string | null {
+  if (
+    typeof value !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}[T ](?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?(?:Z|[+-]\d{2}(?::?\d{2})?)?$/.test(
+      value,
+    )
+  )
+    return null;
+  const day = new Date(value.slice(0, 10) + "T12:00:00Z");
+  if (
+    !Number.isFinite(day.getTime()) ||
+    day.toISOString().slice(0, 10) !== value.slice(0, 10)
+  )
+    return null;
+  let normalized = value.replace(" ", "T");
+  if (!/(?:Z|[+-]\d{2}(?::?\d{2})?)$/.test(normalized)) return normalized;
+  if (/[+-]\d{2}$/.test(normalized)) normalized += ":00";
+  const date = new Date(normalized);
+  if (!Number.isFinite(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-NZ", {
+    timeZone: "Pacific/Auckland",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const part = (type: string) => parts.find((p) => p.type === type)!.value;
+  return `${part("year")}-${part("month")}-${part("day")}T${part("hour")}:${part("minute")}:${part("second")}${value.match(/\.\d+/)?.[0] ?? ""}`;
+}
 /** Map only the observed successful Member Checkin shape; never event/delivery time. */
 export function grantedCheckin(
   value: unknown,
@@ -31,23 +64,9 @@ export function grantedCheckin(
     return null;
   const memberId = id(p.memberid),
     recordId = id(p.id);
-  if (
-    !memberId ||
-    !recordId ||
-    typeof p.timestamp !== "string" ||
-    !/^\d{4}-\d{2}-\d{2}[T ](?:[01]\d|2[0-3]):[0-5]\d:[0-5]\d(?:\.\d{1,6})?$/.test(
-      p.timestamp,
-    )
-  )
-    return null;
-  const localTimestamp = p.timestamp.replace(" ", "T"),
-    date = localTimestamp.slice(0, 10),
-    validated = new Date(localTimestamp + "Z");
-  if (
-    !Number.isFinite(validated.getTime()) ||
-    validated.toISOString().slice(0, 10) !== date
-  )
-    return null;
+  const localTimestamp = nzCheckinTimestamp(p.timestamp);
+  if (!memberId || !recordId || !localTimestamp) return null;
+  const date = localTimestamp.slice(0, 10);
   return {
     memberId,
     record: {

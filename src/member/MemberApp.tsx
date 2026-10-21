@@ -153,15 +153,16 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
         try {
           if (c.value.timeZone !== "Pacific/Auckland") throw Error();
           setCheckins(parseCheckinTimes(c.value.checkins));
+          if (c.value.historyPending === true)
+            setCheckinError(
+              "Earlier received check-ins are being prepared. Please refresh shortly.",
+            );
         } catch {
           setCheckinError(
-            "Check-in times couldn’t be read. Please refresh and try again.",
+            "Check-in times couldn’t be read. Please tell us GM-CHECKINS-FORMAT.",
           );
         }
-      } else
-        setCheckinError(
-          "Check-in times are temporarily unavailable. Please refresh and try again.",
-        );
+      } else setCheckinError(memberError(c.reason, "checkins"));
       setProfile({
         firstName: value.firstName,
         lastName: value.lastName,

@@ -1,4 +1,10 @@
 import { apiJson, limitedText } from "./auth";
+import { openEnvelope, type WebhookEnv } from "./webhook";
+import {
+  grantedCheckin,
+  memberCheckinIndex,
+  sealCheckin,
+} from "./checkinRecords";
 interface SqlCursor<T> {
   one(): T;
   toArray(): T[];
@@ -19,7 +25,10 @@ interface InboxState {
 }
 /** Private, durable staging inbox. No public read endpoint or member-data access. */
 export class GymMasterCheckinInbox {
-  constructor(private state: InboxState) {
+  constructor(
+    private state: InboxState,
+    private env: WebhookEnv,
+  ) {
     state.storage.sql.exec(
       "CREATE TABLE IF NOT EXISTS pending_webhooks (event_key TEXT PRIMARY KEY, sealed_event TEXT NOT NULL, expires_at INTEGER NOT NULL)",
     );
@@ -31,6 +40,9 @@ export class GymMasterCheckinInbox {
     );
     state.storage.sql.exec(
       "CREATE INDEX IF NOT EXISTS member_checkins_dates ON member_checkins(member_key,day)",
+    );
+    state.storage.sql.exec(
+      "CREATE TABLE IF NOT EXISTS checkin_imports (event_key TEXT PRIMARY KEY, expires_at INTEGER NOT NULL)",
     );
   }
   async fetch(request: Request) {
@@ -105,6 +117,12 @@ export class GymMasterCheckinInbox {
             mapped.sealed,
             expires,
           );
+        if (key.startsWith("live:"))
+          this.state.storage.sql.exec(
+            "INSERT OR IGNORE INTO checkin_imports(event_key,expires_at) VALUES (?,?)",
+            `v2:${key}`,
+            expires,
+          );
         return changed === 0;
       });
       stage = "GM-WEBHOOK-INBOX-ALARM";
@@ -114,6 +132,63 @@ export class GymMasterCheckinInbox {
     } catch {
       return apiJson({ error: "storage_unavailable", code: stage }, 503);
     }
+  }
+  private async backfill() {
+    const secret = this.env.GYMMASTER_WEBHOOK_TOKEN;
+    if (!secret) return false;
+    const pending = this.state.storage.sql
+      .exec<{ event_key: string; sealed_event: string; expires_at: number }>(
+        "SELECT p.event_key,p.sealed_event,p.expires_at FROM pending_webhooks p LEFT JOIN checkin_imports m ON m.event_key=('v2:'||p.event_key) WHERE m.event_key IS NULL AND p.event_key LIKE 'live:%' AND p.expires_at>? ORDER BY p.expires_at DESC LIMIT 50",
+        Date.now(),
+      )
+      .toArray();
+    for (const row of pending) {
+      let record: {
+        memberKey: string;
+        id: string;
+        day: string;
+        sealed: string;
+      } | null = null;
+      try {
+        const mapped = grantedCheckin(
+          await openEnvelope(row.sealed_event, secret),
+        );
+        if (mapped) {
+          const memberKey = await memberCheckinIndex(mapped.memberId, secret);
+          record = {
+            memberKey,
+            id: mapped.record.id,
+            day: mapped.record.date,
+            sealed: await sealCheckin(mapped.record, secret, memberKey),
+          };
+        }
+      } catch {
+        console.warn("GM-CHECKINS-STAGED-READ");
+      }
+      this.state.storage.transactionSync(() => {
+        if (record)
+          this.state.storage.sql.exec(
+            "INSERT OR IGNORE INTO member_checkins(member_key,record_id,day,sealed_record,expires_at) VALUES (?,?,?,?,?)",
+            record.memberKey,
+            record.id,
+            record.day,
+            record.sealed,
+            row.expires_at,
+          );
+        this.state.storage.sql.exec(
+          "INSERT OR IGNORE INTO checkin_imports(event_key,expires_at) VALUES (?,?)",
+          `v2:${row.event_key}`,
+          row.expires_at,
+        );
+      });
+    }
+    const { remaining } = this.state.storage.sql
+      .exec<{ remaining: number }>(
+        "SELECT EXISTS(SELECT 1 FROM pending_webhooks p LEFT JOIN checkin_imports m ON m.event_key=('v2:'||p.event_key) WHERE m.event_key IS NULL AND p.event_key LIKE 'live:%' AND p.expires_at>?) AS remaining",
+        Date.now(),
+      )
+      .one();
+    return remaining > 0;
   }
   private async query(request: Request) {
     try {
@@ -133,6 +208,8 @@ export class GymMasterCheckinInbox {
       const span = Date.parse(value.through) - Date.parse(value.from);
       if (!Number.isFinite(span) || span < 0 || span > 21 * 86400000)
         throw Error();
+      const historyPending = await this.backfill();
+      if (historyPending) await this.state.storage.setAlarm(Date.now() + 1000);
       const rows = this.state.storage.sql
         .exec<{ sealed_record: string }>(
           "SELECT sealed_record FROM member_checkins WHERE member_key=? AND day>=? AND day<=? AND expires_at>? ORDER BY day,record_id LIMIT 1001",
@@ -143,12 +220,20 @@ export class GymMasterCheckinInbox {
         )
         .toArray();
       if (rows.length > 1000) throw Error();
-      return apiJson({ records: rows.map((row) => row.sealed_record) });
+      return apiJson({
+        records: rows.map((row) => row.sealed_record),
+        historyPending,
+      });
     } catch {
       return apiJson({ error: "checkins_unavailable" }, 503);
     }
   }
   async alarm() {
+    const historyPending = await this.backfill();
+    this.state.storage.sql.exec(
+      "DELETE FROM checkin_imports WHERE expires_at <= ?",
+      Date.now(),
+    );
     this.state.storage.sql.exec(
       "DELETE FROM pending_webhooks WHERE expires_at <= ?",
       Date.now(),
@@ -162,6 +247,9 @@ export class GymMasterCheckinInbox {
         "SELECT (SELECT count(*) FROM pending_webhooks)+(SELECT count(*) FROM member_checkins) AS remaining",
       )
       .one();
-    if (remaining > 0) await this.state.storage.setAlarm(Date.now() + 3600000);
+    if (remaining > 0)
+      await this.state.storage.setAlarm(
+        Date.now() + (historyPending ? 1000 : 3600000),
+      );
   }
 }

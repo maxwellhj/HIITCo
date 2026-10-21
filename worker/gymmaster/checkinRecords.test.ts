@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   grantedCheckin,
+  nzCheckinTimestamp,
   memberCheckinIndex,
   sealCheckin,
   openCheckin,
@@ -44,10 +45,26 @@ describe("NZ member check-in records", () => {
         { memberid: 0 },
         { id: null },
         { timestamp: "2026-02-30 06:47:30" },
-        { timestamp: "2026-10-22T06:47:30Z" },
+        { timestamp: "2026-10-22T99:47:30Z" },
       ].map((p) => ({ ...event, payload: { ...event.payload, ...p } })),
     ])
       expect(grantedCheckin(e)).toBeNull();
+  });
+  it("accepts explicit UTC and offset timestamps and converts them to the correct NZ day and time", () => {
+    for (const [input, expected] of [
+      ["2026-10-21T17:47:30.172346Z", "2026-10-22T06:47:30.172346"],
+      ["2026-07-01T18:47:30Z", "2026-07-02T06:47:30"],
+      ["2026-10-22T06:47:30+13:00", "2026-10-22T06:47:30"],
+      ["2026-07-02T06:47:30+12", "2026-07-02T06:47:30"],
+      ["2026-10-22T06:47:30+12:00", "2026-10-22T07:47:30"],
+    ])
+      expect(nzCheckinTimestamp(input)).toBe(expected);
+    expect(
+      grantedCheckin({
+        ...event,
+        payload: { ...event.payload, timestamp: "2026-10-21T17:47:30Z" },
+      })?.record.localTimestamp,
+    ).toBe("2026-10-22T06:47:30");
   });
   it("formats NZ wall times without adding 12 or 13 hours, regardless of season", () => {
     for (const date of ["2026-07-02", "2026-10-22", "2026-04-05", "2026-09-27"])

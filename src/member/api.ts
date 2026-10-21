@@ -3,6 +3,7 @@ export class MemberApiError extends Error {
     public code: string,
     public status: number,
     public providerStatus?: number,
+    public diagnostic?: string,
   ) {
     super(code);
   }
@@ -44,12 +45,18 @@ export async function memberApi(
       typeof result.providerStatus === "number"
         ? result.providerStatus
         : undefined,
+      typeof result.code === "string" &&
+        /^GM-CHECKINS-(?:CONFIG|LIMITER|LOOKUP|DECRYPT|FORMAT)$/.test(
+          result.code,
+        )
+        ? result.code
+        : undefined,
     );
   return result;
 }
 export function memberError(
   error: unknown,
-  area: "login" | "profile" | "visits" | "session",
+  area: "login" | "profile" | "visits" | "session" | "checkins",
 ): string {
   if (!(error instanceof MemberApiError))
     return "We couldn’t read your member information. Please try again.";
@@ -61,6 +68,8 @@ export function memberError(
     return "Please wait a minute before trying again.";
   if (error.code === "connection_unavailable")
     return "The member connection isn’t ready. Please contact the club.";
+  if (area === "checkins")
+    return `Check-in times are temporarily unavailable. Please tell us ${error.diagnostic ?? "GM-CHECKINS-CONNECTION"}.`;
   if (area === "visits") {
     const prefix = "Weekly attendance and streaks are temporarily unavailable.";
     const suffix =

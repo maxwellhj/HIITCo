@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import worker, { type Env } from "../index";
 import { sealSession, SESSION_COOKIE } from "./session";
 import { memberCheckinIndex, sealCheckin } from "./checkinRecords";
@@ -39,6 +39,10 @@ function config() {
   };
   return { env, store };
 }
+beforeEach(() => {
+  vi.spyOn(console, "info").mockImplementation(() => {});
+  vi.spyOn(console, "error").mockImplementation(() => {});
+});
 afterEach(() => vi.restoreAllMocks());
 describe("member check-in time API", () => {
   it("queries only the cookie's member, decrypts scoped records and returns minimal uncached data", async () => {
@@ -103,7 +107,10 @@ describe("member check-in time API", () => {
     );
     const response = await worker.fetch(await request(), env);
     expect(response.status).toBe(503);
-    expect(await response.json()).toEqual({ error: "checkins_unavailable" });
+    expect(await response.json()).toEqual({
+      error: "checkins_unavailable",
+      code: "GM-CHECKINS-DECRYPT",
+    });
   });
   it("does not turn an unavailable inbox into an empty successful history", async () => {
     const { env, store } = config();
@@ -113,6 +120,9 @@ describe("member check-in time API", () => {
       ...env,
       GYMMASTER_CHECKIN_INBOX: undefined,
     });
-    expect(await response.json()).toEqual({ error: "checkins_unavailable" });
+    expect(await response.json()).toEqual({
+      error: "checkins_unavailable",
+      code: "GM-CHECKINS-CONFIG",
+    });
   });
 });

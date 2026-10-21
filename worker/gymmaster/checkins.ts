@@ -4,6 +4,10 @@ import { readSession, clearSessionCookie } from "./session";
 import { memberCheckinIndex, openCheckin } from "./checkinRecords";
 import { parseCheckinTimes } from "../../src/domain/checkinTimes";
 import { dateKey, weekKey, shiftDate } from "../../src/domain/attendance";
+function unavailable(code: string) {
+  console.error(code);
+  return apiJson({ error: "checkins_unavailable", code }, 503);
+}
 export async function gymMasterCheckins(
   request: Request,
   env: AuthEnv & WebhookEnv,
@@ -24,7 +28,8 @@ export async function gymMasterCheckins(
     !env.GYMMASTER_CHECKIN_INBOX ||
     !env.LOGIN_RATE_LIMITER
   )
-    return apiJson({ error: "checkins_unavailable" }, 503);
+    return unavailable("GM-CHECKINS-CONFIG");
+  let stage = "GM-CHECKINS-LIMITER";
   try {
     if (
       !(
@@ -36,6 +41,7 @@ export async function gymMasterCheckins(
       return apiJson({ error: "too_many_attempts" }, 429, {
         "Retry-After": "60",
       });
+    stage = "GM-CHECKINS-LOOKUP";
     const memberKey = await memberCheckinIndex(
       session.memberId,
       env.GYMMASTER_WEBHOOK_TOKEN,
@@ -53,23 +59,36 @@ export async function gymMasterCheckins(
       }),
     );
     if (!response.ok) throw Error();
-    const value = (await response.json()) as { records?: unknown };
+    const value = (await response.json()) as {
+      records?: unknown;
+      historyPending?: unknown;
+    };
     if (
       !Array.isArray(value.records) ||
       value.records.length > 1000 ||
       value.records.some((record) => typeof record !== "string")
     )
       throw Error();
+    stage = "GM-CHECKINS-DECRYPT";
     const records = await Promise.all(
       value.records.map((record) =>
         openCheckin(record, env.GYMMASTER_WEBHOOK_TOKEN!, memberKey),
       ),
     );
+    stage = "GM-CHECKINS-FORMAT";
     const checkins = parseCheckinTimes(records);
     if (checkins.some((record) => record.date < from || record.date > through))
       throw Error();
-    return apiJson({ checkins, timeZone: "Pacific/Auckland" });
+    console.info("GM-CHECKINS-LOOKUP", {
+      matched: checkins.length > 0,
+      historyPending: value.historyPending === true,
+    });
+    return apiJson({
+      checkins,
+      timeZone: "Pacific/Auckland",
+      ...(value.historyPending === true ? { historyPending: true } : {}),
+    });
   } catch {
-    return apiJson({ error: "checkins_unavailable" }, 503);
+    return unavailable(stage);
   }
 }
