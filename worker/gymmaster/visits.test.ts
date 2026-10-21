@@ -32,7 +32,10 @@ async function request(
     headers: { Cookie: `${SESSION_COOKIE}=${cookie}`, ...options.headers },
   });
 }
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+});
 describe("authenticated daily visits", () => {
   it("uses only the encrypted member session and returns filtered documented fields", async () => {
     const network = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
@@ -62,8 +65,39 @@ describe("authenticated daily visits", () => {
     );
     expect(url.searchParams.get("api_key")).toBe(secret);
     expect(url.searchParams.get("token")).toBe(token);
+    expect(url.searchParams.get("startdate")).toBe(
+      shiftDate(weekKey(today), -357),
+    );
+    expect(url.searchParams.get("enddate")).toBe(today);
+    expect([...url.searchParams.keys()].sort()).toEqual([
+      "api_key",
+      "enddate",
+      "startdate",
+      "token",
+    ]);
     expect(options?.redirect).toBe("manual");
     expect(options?.method).toBe("GET");
+  });
+  it("submits the support-confirmed date parameters using NZ dates across a UTC Sunday boundary", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-18T11:30:00Z"));
+    const network = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input) => {
+        const query = new URL(String(input)).searchParams;
+        if (!query.get("startdate") || !query.get("enddate"))
+          return new Response(
+            "startdate must be provided. enddate must be provided",
+            { status: 400 },
+          );
+        return Response.json({ result: [row("2026-10-19")] });
+      });
+    const response = await worker.fetch(await request(), env());
+    expect(response.status).toBe(200);
+    const query = new URL(String(network.mock.calls[0][0])).searchParams;
+    expect(query.get("startdate")).toBe("2025-10-27");
+    expect(query.get("enddate")).toBe("2026-10-19");
+    expect((await response.json()).days).toEqual([row("2026-10-19")]);
   });
   it("calculates streaks using older returned history without exposing extra daily records", async () => {
     const rows = Array.from({ length: 12 }, (_, i) =>

@@ -35,12 +35,21 @@ export async function gymMasterVisits(
   } catch {
     return apiJson({ error: "connection_unavailable" }, 503);
   }
+  const now = new Date();
+  const today = dateKey(now);
+  const currentWeek = weekKey(today);
+  const start = shiftDate(currentWeek, -14);
+  // GymMaster support confirmed these required fields are omitted from the docs.
+  // Request 52 weeks for streaks; only the latest three weeks of days reach the client.
+  const historyStart = shiftDate(currentWeek, -51 * 7);
   const upstreamUrl = new URL(
     "https://hiitco.gymmasteronline.com/portal/api/v2/member/visits/daily",
   );
   upstreamUrl.search = new URLSearchParams({
     api_key: env.GYMMASTER_API_KEY!,
     token: session.token,
+    startdate: historyStart,
+    enddate: today,
   }).toString();
   let stage = "request";
   try {
@@ -71,14 +80,14 @@ export async function gymMasterVisits(
     const data = body as Record<string, unknown>;
     if (typeof data.error === "string" && data.error.trim())
       return apiJson({ error: "visits_not_available" }, 502);
-    const rows = parseDailyVisits(data.result);
-    const today = dateKey(new Date()),
-      start = shiftDate(weekKey(today), -14);
+    const rows = parseDailyVisits(data.result).filter(
+      (row) => row.date >= historyStart && row.date <= today,
+    );
     return apiJson({
       days: rows.filter((row) => row.date >= start && row.date <= today),
       from: start,
       through: today,
-      streak: memberStreak(rows),
+      streak: memberStreak(rows, now),
     });
   } catch (error) {
     if (
