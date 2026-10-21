@@ -69,3 +69,7 @@ The member Home and Progress screens use `GET /api/gymmaster/profile` and `GET /
 ## Remaining production work
 
 The authenticated GymMaster session and read-only member profile are implemented. Cloud-saved training logs, saved member targets and staff authorisation still require a persistent backend with member access controls. Do not migrate local demo records into a real account automatically. Verify historical attendance coverage and confirm deployed daily attendance after adding the support-confirmed date parameters before relying on weekly statistics. Add approved club content, recovery/support flows and operational monitoring, and test install/update/offline behaviour on physical iOS and Android devices. Do not cache private API responses or expose provider keys in the browser.
+
+## Check-in webhook preparation
+
+A token-authenticated webhook receiver and private encrypted SQLite Durable Object inbox are implemented at `/api/gymmaster/webhooks/checkin`. Configure the same private Secret Token in GymMaster and the runtime `GYMMASTER_WEBHOOK_TOKEN` secret; the deployment creates the inbox binding. Authentication, duplicate protection, test/live separation and 30-day staging retention are implemented. The specific Member Checkin payload and success semantics still need verification before timestamps can be shown to members. Webhooks do not change daily counts or fabricate historical visit times. See `DEPLOYMENT.md` for setup and testing.

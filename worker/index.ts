@@ -1,7 +1,9 @@
 import { gymMasterAuth, type AuthEnv } from "./gymmaster/auth";
 import { gymMasterVisits } from "./gymmaster/visits";
 import { gymMasterProfile } from "./gymmaster/profile";
-export interface Env extends AuthEnv {
+import { gymMasterWebhook, type WebhookEnv } from "./gymmaster/webhook";
+export { GymMasterCheckinInbox } from "./gymmaster/webhookInbox";
+export interface Env extends AuthEnv, WebhookEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
 }
 
@@ -30,6 +32,8 @@ export default {
       // Public liveness only. Never reveal secret values or credential status.
       return json({ status: "ok" });
     }
+    const webhookResponse = await gymMasterWebhook(request, env);
+    if (webhookResponse) return webhookResponse;
     const authResponse = await gymMasterAuth(request, env);
     if (authResponse) return authResponse;
     const profileResponse = await gymMasterProfile(request, env);
