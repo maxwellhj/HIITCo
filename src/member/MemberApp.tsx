@@ -15,6 +15,7 @@ import { Messages } from "../pages/Messages";
 import { formatDate } from "../domain/attendance";
 import { parseDailyVisits, type DailyVisits } from "../domain/gymmasterVisits";
 import type { GymMasterMemberProfile } from "../domain/gymmasterProfile";
+import { parseCheckinTimes, type MemberCheckin } from "../domain/checkinTimes";
 import { MemberApiError, memberApi, memberError } from "./api";
 import { MemberLogin } from "./MemberLogin";
 import type { StreakSummary } from "./attendance";
@@ -57,6 +58,8 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
   const [streakSummary, setStreakSummary] = useState<StreakSummary | null>(
     null,
   );
+  const [checkins, setCheckins] = useState<MemberCheckin[] | null>(null);
+  const [checkinError, setCheckinError] = useState("");
   const loggingOut = useRef(false);
   const generation = useRef(0),
     controller = useRef<AbortController | null>(null),
@@ -64,6 +67,8 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
   function clear() {
     setProfile(null);
     setDays(null);
+    setCheckins(null);
+    setCheckinError("");
     setStreakSummary(null);
     setAttendanceError("");
     setExpiresAt(null);
@@ -91,9 +96,10 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
       )
         throw new MemberApiError("session_expired", 401);
       setExpiresAt(session.expiresAt);
-      const [p, v] = await Promise.allSettled([
+      const [p, v, c] = await Promise.allSettled([
         memberApi("profile", undefined, abort.signal),
         memberApi("visits", undefined, abort.signal),
+        memberApi("checkins", undefined, abort.signal),
       ]);
       if (current !== generation.current) return;
       if (
@@ -105,6 +111,12 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
           v.reason.status === 401)
       )
         throw new MemberApiError("session_expired", 401);
+      if (
+        c.status === "rejected" &&
+        c.reason instanceof MemberApiError &&
+        c.reason.status === 401
+      )
+        throw c.reason;
       if (p.status === "rejected") throw p.reason;
       const value = p.value.profile as GymMasterMemberProfile | undefined;
       if (
@@ -137,6 +149,19 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
           );
         }
       } else setAttendanceError(memberError(v.reason, "visits"));
+      if (c.status === "fulfilled") {
+        try {
+          if (c.value.timeZone !== "Pacific/Auckland") throw Error();
+          setCheckins(parseCheckinTimes(c.value.checkins));
+        } catch {
+          setCheckinError(
+            "Check-in times couldn’t be read. Please refresh and try again.",
+          );
+        }
+      } else
+        setCheckinError(
+          "Check-in times are temporarily unavailable. Please refresh and try again.",
+        );
       setProfile({
         firstName: value.firstName,
         lastName: value.lastName,
@@ -344,6 +369,8 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
               profile={profile}
               days={days}
               streakSummary={streakSummary}
+              checkins={checkins}
+              checkinError={checkinError}
               attendanceError={attendanceError}
               refresh={() => void load()}
               busy={false}

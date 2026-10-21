@@ -1,4 +1,9 @@
 import { apiJson, limitedText } from "./auth";
+import {
+  grantedCheckin,
+  memberCheckinIndex,
+  sealCheckin,
+} from "./checkinRecords";
 export interface WebhookEnv {
   GYMMASTER_WEBHOOK_TOKEN?: string;
   GYMMASTER_CHECKIN_INBOX?: {
@@ -142,6 +147,23 @@ export async function gymMasterWebhook(
   let stage = "GM-WEBHOOK-ENCRYPTION";
   try {
     const sealed = await sealEnvelope(event, env.GYMMASTER_WEBHOOK_TOKEN);
+    const mapped = grantedCheckin(event);
+    const memberKey = mapped
+      ? await memberCheckinIndex(mapped.memberId, env.GYMMASTER_WEBHOOK_TOKEN)
+      : null;
+    const checkin =
+      mapped && memberKey
+        ? {
+            memberKey,
+            id: mapped.record.id,
+            day: mapped.record.date,
+            sealed: await sealCheckin(
+              mapped.record,
+              env.GYMMASTER_WEBHOOK_TOKEN,
+              memberKey,
+            ),
+          }
+        : null;
     stage = "GM-WEBHOOK-STORAGE";
     const inbox = env.GYMMASTER_CHECKIN_INBOX.get(
       env.GYMMASTER_CHECKIN_INBOX.idFromName("hiitco-checkin-inbox-v1"),
@@ -153,6 +175,7 @@ export async function gymMasterWebhook(
         body: JSON.stringify({
           key: `${test ? "test" : "live"}:${event.event_id}`,
           sealed,
+          checkin,
         }),
       }),
     );

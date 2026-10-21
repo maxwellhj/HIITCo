@@ -9,12 +9,15 @@ import { upcomingEvents } from "../domain/events";
 import { dateKey, formatDate, weekKey } from "../domain/attendance";
 import type { DailyVisits } from "../domain/gymmasterVisits";
 import type { GymMasterMemberProfile } from "../domain/gymmasterProfile";
+import { checkinTimeLabel, type MemberCheckin } from "../domain/checkinTimes";
 import { memberAttendance, type StreakSummary } from "./attendance";
 export function MemberDashboard({
   profile,
   days,
   streakSummary,
   attendanceError,
+  checkins,
+  checkinError,
   refresh,
   busy,
   progress = false,
@@ -23,6 +26,8 @@ export function MemberDashboard({
   days: DailyVisits[] | null;
   streakSummary: StreakSummary | null;
   attendanceError: string;
+  checkins: MemberCheckin[] | null;
+  checkinError: string;
   refresh: () => void;
   busy: boolean;
   progress?: boolean;
@@ -32,7 +37,12 @@ export function MemberDashboard({
       date: string;
       visits: number | null;
     } | null>(null);
-  const stats = days === null ? null : memberAttendance(days),
+  const stats =
+      days === null
+        ? checkins?.length
+          ? memberAttendance([])
+          : null
+        : memberAttendance(days),
     current = stats?.weeks[0];
   const target = 3,
     total = profile.totalVisits,
@@ -56,6 +66,9 @@ export function MemberDashboard({
     streakCount == null ? "—" : `${streakCount}${streakExact ? "" : "+"}`;
   const today = dateKey(new Date());
   const event = upcomingEvents(clubEvents, today)[0];
+  const selectedCheckins = selected
+    ? (checkins?.filter((record) => record.date === selected.date) ?? [])
+    : [];
   return (
     <div className="home-overview member-overview">
       <Card className="member-total">
@@ -171,22 +184,26 @@ export function MemberDashboard({
             <div className="member-day-grid">
               {stats.weeks[week].days.map((day) => (
                 <button
-                  className={`member-day ${day.visits !== null && day.visits > 0 ? "attended" : ""}`}
+                  className={`member-day ${(day.visits !== null && day.visits > 0) || checkins?.some((record) => record.date === day.date) ? "attended" : ""}`}
                   key={day.date}
                   disabled={day.future}
                   onClick={() => setSelected(day)}
-                  aria-label={`${formatDate(day.date, { weekday: "long", day: "numeric", month: "long" })}, ${day.future ? "upcoming" : day.visits === null ? "not returned" : `${day.visits} visits`}`}
+                  aria-label={`${formatDate(day.date, { weekday: "long", day: "numeric", month: "long" })}, ${day.future ? "upcoming" : day.visits === null ? (checkins?.some((record) => record.date === day.date) ? "check-in time received; daily count pending" : "not returned") : `${day.visits} visits`}`}
                 >
                   <span>{formatDate(day.date, { weekday: "short" })}</span>
                   <small>{formatDate(day.date, { day: "numeric" })}</small>
                   <strong>
                     {day.future
                       ? "·"
-                      : day.visits === null
-                        ? "?"
-                        : day.visits > 0
-                          ? "✓"
-                          : "0"}
+                      : checkins?.some((record) => record.date === day.date)
+                        ? "✓"
+                        : day.visits === null
+                          ? checkins?.some((record) => record.date === day.date)
+                            ? "✓"
+                            : "?"
+                          : day.visits > 0
+                            ? "✓"
+                            : "0"}
                   </strong>
                 </button>
               ))}
@@ -209,10 +226,48 @@ export function MemberDashboard({
                 </strong>
                 <p>
                   {selected.visits === null
-                    ? "GymMaster didn’t return a record for this date. It doesn’t confirm zero visits."
+                    ? selectedCheckins.length > 0
+                      ? "The daily visit count hasn’t updated for this date yet."
+                      : "GymMaster didn’t return a daily count for this date. It doesn’t confirm zero visits."
                     : `GymMaster recorded ${selected.visits} ${selected.visits === 1 ? "visit" : "visits"}.`}
                 </p>
-                <p>Check-in times aren’t provided by this API.</p>
+                {selectedCheckins.length > 0 ? (
+                  <>
+                    {selected.visits === 0 && (
+                      <p className="small muted">
+                        The daily count may still be catching up to this
+                        check-in.
+                      </p>
+                    )}
+                    <p className="small muted">
+                      Club check-in times · New Zealand time
+                    </p>
+                    <ul className="member-checkin-times">
+                      {selectedCheckins.map((record) => (
+                        <li key={record.id}>
+                          <time dateTime={record.localTimestamp}>
+                            {checkinTimeLabel(record.localTimestamp)}
+                          </time>
+                          <span>
+                            {record.door ?? "Club check-in"}
+                            <small>Ref {record.id}</small>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="small muted">
+                      Only times received by this app are shown; this may not be
+                      every visit.
+                    </p>
+                  </>
+                ) : checkinError ? (
+                  <p className="error">{checkinError}</p>
+                ) : (
+                  <p>
+                    No check-in time has been received for this date. Older
+                    visits may have a count but no arrival time.
+                  </p>
+                )}
               </div>
             )}
           </>

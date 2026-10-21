@@ -2961,3 +2961,8 @@ td > svg {
   .member-overview .home-attendance { padding: 14px 10px; }
   .member-day { font-size: 10px; }
 }
+.member-checkin-times { list-style: none; padding: 0; margin: 12px 0; }
+.member-checkin-times li { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-top: 1px solid var(--border); }
+.member-checkin-times time { font-weight: 650; white-space: nowrap; }
+.member-checkin-times span { overflow-wrap: anywhere; }
+.member-checkin-times small { display: block; color: var(--muted); margin-top: 3px; }

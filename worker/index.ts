@@ -2,6 +2,7 @@ import { gymMasterAuth, type AuthEnv } from "./gymmaster/auth";
 import { gymMasterVisits } from "./gymmaster/visits";
 import { gymMasterProfile } from "./gymmaster/profile";
 import { gymMasterWebhook, type WebhookEnv } from "./gymmaster/webhook";
+import { gymMasterCheckins } from "./gymmaster/checkins";
 export { GymMasterCheckinInbox } from "./gymmaster/webhookInbox";
 export interface Env extends AuthEnv, WebhookEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -36,6 +37,8 @@ export default {
     if (webhookResponse) return webhookResponse;
     const authResponse = await gymMasterAuth(request, env);
     if (authResponse) return authResponse;
+    const checkinResponse = await gymMasterCheckins(request, env);
+    if (checkinResponse) return checkinResponse;
     const profileResponse = await gymMasterProfile(request, env);
     if (profileResponse) return profileResponse;
     const visitsResponse = await gymMasterVisits(request, env);
