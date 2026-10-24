@@ -13,6 +13,8 @@
   --blue: #96bfe1;
   --muted: #63676d;
   --panel: #ffffff;
+  --card-shadow: 0 3px 6px rgb(23 25 28 / 3%), 0 12px 28px -10px rgb(23 25 28 / 14%);
+  --control-shadow: 0 2px 4px rgb(23 25 28 / 5%), 0 5px 10px -6px rgb(23 25 28 / 14%);
   --border: #e0e4e7;
   --ring-track: #edf0f2;
   --accent-ink: #464c53;
@@ -349,6 +351,7 @@ main {
   font-size: 10px;
 }
 .card {
+  box-shadow: var(--card-shadow);
   border: 1px solid var(--border);
   border-radius: 13px;
   background: var(--panel);
@@ -2992,3 +2995,15 @@ td > svg {
 .home-workouts .workout-slate button > svg { grid-column: 2; grid-row: 1; width: 12px; margin: 0; }
 .home-workouts .workout-paired-dates { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 3px; flex-wrap: wrap; }
 .home-workouts .workout-paired-dates > span + span::before { content: "/ "; }
+
+/* Soft elevation keeps white surfaces distinct without adding visual clutter. */
+.home-library-button { box-shadow: var(--card-shadow); }
+.workout-slate button,
+.member-week-tabs button,
+.member-day:not(:disabled),
+.primary { box-shadow: var(--control-shadow); }
+.workout-slate button[aria-expanded="true"],
+.member-day.attended { box-shadow: 0 2px 5px rgb(39 97 140 / 9%), inset 0 1px 0 rgb(255 255 255 / 80%); }
+@media (hover: hover) {
+  .home-library-button:hover { box-shadow: 0 5px 10px rgb(23 25 28 / 5%), 0 16px 30px -10px rgb(23 25 28 / 18%); }
+}
