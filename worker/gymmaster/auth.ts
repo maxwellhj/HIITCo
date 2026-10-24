@@ -1,4 +1,5 @@
 import {
+  MAX_REMEMBER_SECONDS,
   clearSessionCookie,
   readSession,
   sealSession,
@@ -123,17 +124,24 @@ export async function gymMasterAuth(
     "application/json"
   )
     return failure("invalid_request", 400);
-  let email: string, password: string;
+  let email: string,
+    password: string,
+    remember = false;
   try {
     const body: unknown = JSON.parse(await limitedText(request.body, 4096));
     if (!body || typeof body !== "object" || Array.isArray(body)) throw Error();
     const fields = body as Record<string, unknown>;
     if (
-      Object.keys(fields).some((name) => !["email", "password"].includes(name))
+      Object.keys(fields).some(
+        (name) => !["email", "password", "remember"].includes(name),
+      )
     )
       throw Error();
     if (typeof fields.email !== "string" || typeof fields.password !== "string")
       throw Error();
+    if (fields.remember !== undefined && typeof fields.remember !== "boolean")
+      throw Error();
+    remember = fields.remember === true;
     email = fields.email.trim();
     password = fields.password;
     if (
@@ -215,7 +223,7 @@ export async function gymMasterAuth(
     if (!Number.isFinite(expires)) return formatFailure("EXPIRY");
     const memberId = positiveInteger(result.memberid);
     if (!Number.isFinite(memberId)) return formatFailure("MEMBER");
-    const ttl = Math.min(expires, 3600);
+    const ttl = Math.min(expires, remember ? MAX_REMEMBER_SECONDS : 3600);
     const expiresAt = Date.now() + ttl * 1000;
     stage = "session";
     const sealed = await sealSession(
@@ -223,7 +231,7 @@ export async function gymMasterAuth(
       env.GYMMASTER_API_KEY,
     );
     return apiJson({ connected: true, expiresAt }, 200, {
-      "Set-Cookie": sessionCookie(sealed, ttl),
+      "Set-Cookie": sessionCookie(sealed, remember ? ttl : undefined),
     });
   } catch (error) {
     if (stage === "session") return failure("session_unavailable", 503);

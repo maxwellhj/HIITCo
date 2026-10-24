@@ -2966,3 +2966,29 @@ td > svg {
 .member-checkin-times time { font-weight: 650; white-space: nowrap; }
 .member-checkin-times span { overflow-wrap: anywhere; }
 .member-checkin-times small { display: block; color: var(--muted); margin-top: 3px; }
+
+/* Compact member home: visits reveal progress; workouts lead the page. */
+.member-shell .home-heading .heading-line { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.member-shell .home-heading .heading-line h1 { font-size: clamp(20px, 4vw, 28px); margin: 0; }
+.member-visit-total { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; padding: 4px 0 4px 8px; border: 0; background: none; color: var(--text); text-align: right; cursor: pointer; }
+.member-visit-total strong { font-size: 32px; line-height: 1.1; }
+.member-visit-total span { font-size: 11px; margin-top: 4px; color: var(--muted); }
+.member-visit-total small { font-size: 10px; margin-top: 4px; color: var(--muted); }
+.member-stats-dropdown { margin: 14px 0; }
+.member-stats-dropdown > p { font-size: 11px; line-height: 1.5; color: var(--muted); margin-top: 10px; }
+.member-overview > .home-workouts { margin: 0 0 16px; }
+.home-workouts .workout-slate { margin-top: 10px; gap: 6px; }
+.home-workouts .workout-slate button { padding: 8px 4px; gap: 3px; min-height: 44px; }
+.home-workouts .workout-slate button > span:first-child { font-size: 11px; }
+.home-workouts .workout-slate button > small { margin-top: 0; font-size: 9px; }
+.home-workouts .workout-slate button > svg { margin-top: 2px; }
+.home-workouts .workout-plan-detail { margin-top: 12px; padding-top: 12px; }
+.member-login label.remember-login { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.member-login .remember-login input { width: 18px; height: 18px; margin: 0; accent-color: #27618c; }
+.member-login #remember-login-help { font-size: 12px; margin: 8px 0 0; }
+
+.home-workouts .workout-slate button { display: grid; grid-template-columns: 1fr 12px; column-gap: 2px; row-gap: 5px; padding: 8px 5px; }
+.home-workouts .workout-slate button > span:first-child { grid-column: 1; grid-row: 1; }
+.home-workouts .workout-slate button > svg { grid-column: 2; grid-row: 1; width: 12px; margin: 0; }
+.home-workouts .workout-paired-dates { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 3px; flex-wrap: wrap; }
+.home-workouts .workout-paired-dates > span + span::before { content: "/ "; }

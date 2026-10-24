@@ -1,4 +1,5 @@
 export const SESSION_COOKIE = "__Host-hiitco-gymmaster";
+export const MAX_REMEMBER_SECONDS = 7 * 24 * 3600;
 const CONTEXT = new TextEncoder().encode("hiitco.gymmaster.session.v1");
 export interface MemberSession {
   token: string;
@@ -75,7 +76,7 @@ export async function readSession(
       s.memberId < 1 ||
       !Number.isSafeInteger(s.expiresAt) ||
       s.expiresAt <= now ||
-      s.expiresAt > now + 3600000
+      s.expiresAt > now + MAX_REMEMBER_SECONDS * 1000
     )
       return null;
     return s;
@@ -83,7 +84,7 @@ export async function readSession(
     return null;
   }
 }
-export function sessionCookie(value: string, maxAge: number) {
-  return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${Math.max(0, Math.floor(maxAge))}`;
+export function sessionCookie(value: string, maxAge?: number) {
+  return `${SESSION_COOKIE}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax${maxAge === undefined ? "" : `; Max-Age=${Math.max(0, Math.floor(maxAge))}`}`;
 }
 export const clearSessionCookie = () => sessionCookie("", 0);

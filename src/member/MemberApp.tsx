@@ -45,6 +45,7 @@ function route(): Page {
     : "home";
 }
 export function MemberApp({ onDemo }: { onDemo: () => void }) {
+  const [showHomeStats, setShowHomeStats] = useState(false);
   const [phase, setPhase] = useState<
     "checking" | "signedout" | "ready" | "error"
   >("checking");
@@ -218,6 +219,7 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
     return () => clearTimeout(timer);
   }, [expiresAt]);
   async function signOut() {
+    setShowHomeStats(false);
     if (loggingOut.current) return;
     loggingOut.current = true;
     generation.current++;
@@ -356,18 +358,34 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
             </div>
             <div className="heading-line">
               <h1>{titles[page]}</h1>
-              <span className="date-label">
-                {formatDate(new Date().toISOString(), {
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long",
-                })}
-              </span>
+              {page === "home" ? (
+                <button
+                  className="member-visit-total"
+                  aria-expanded={showHomeStats}
+                  aria-controls="member-home-stats"
+                  onClick={() => setShowHomeStats(!showHomeStats)}
+                >
+                  <strong>{profile.totalVisits ?? "—"}</strong>
+                  <span>Total Club Visits</span>
+                  <small>
+                    {showHomeStats ? "Hide progress ▴" : "View progress ▾"}
+                  </small>
+                </button>
+              ) : (
+                <span className="date-label">
+                  {formatDate(new Date().toISOString(), {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })}
+                </span>
+              )}
             </div>
           </div>
           {page === "home" || page === "progress" ? (
             <MemberDashboard
               profile={profile}
+              showStats={showHomeStats}
               days={days}
               streakSummary={streakSummary}
               checkins={checkins}

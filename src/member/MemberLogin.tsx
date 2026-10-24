@@ -14,6 +14,7 @@ export function MemberLogin({
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [error, setError] = useState(""),
+    [remember, setRemember] = useState(false),
     [busy, setBusy] = useState(false);
   return (
     <div className="member-login">
@@ -37,7 +38,7 @@ export function MemberLogin({
             event.preventDefault();
             setBusy(true);
             setError("");
-            const credentials = { email, password };
+            const credentials = { email, password, remember };
             setPassword("");
             try {
               const result = await memberApi("login", credentials);
@@ -74,13 +75,29 @@ export function MemberLogin({
               disabled={busy}
             />
           </label>
+          <div>
+            <label className="remember-login">
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(e) => setRemember(e.target.checked)}
+                disabled={busy}
+                aria-describedby="remember-login-help"
+              />
+              Keep me logged in
+            </label>
+            <p id="remember-login-help" className="small muted">
+              Remember this session when I reopen the app, until GymMaster
+              requires another sign-in.
+            </p>
+          </div>
           <button className="primary" disabled={busy}>
             {busy ? "Signing in…" : "Sign in"}
           </button>
         </form>
         <p className="small muted">
           Use your member login, rather than a staff login. Your password isn’t
-          saved. Sessions last up to one hour.
+          saved. GymMaster sessions usually last one hour.
         </p>
         <button className="text-button" onClick={onDemo} disabled={busy}>
           Explore the fictional demo

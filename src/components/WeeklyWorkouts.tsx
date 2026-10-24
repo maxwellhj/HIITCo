@@ -1,11 +1,20 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card } from "./UI";
 import { StationCarousel } from "./StationCarousel";
 import { weeklyWorkoutPlan } from "../data/workoutPlan";
-import { formatDate, shiftDate } from "../domain/attendance";
+import { dateKey, formatDate, shiftDate } from "../domain/attendance";
 export function WeeklyWorkouts({ week }: { week: string }) {
-  const [selected, setSelected] = useState<string | null>(null);
+  const detailId = useId();
+  const [selected, setSelected] = useState<string | null>(() => {
+    const day = new Date(dateKey(new Date()) + "T12:00:00Z").getUTCDay();
+    const offset = day === 0 ? 5 : day - 1;
+    return (
+      weeklyWorkoutPlan.find((plan) =>
+        plan.dayOffsets.some((d) => d === offset),
+      )?.id ?? null
+    );
+  });
   const workout = weeklyWorkoutPlan.find((w) => w.id === selected);
   return (
     <Card className="home-workouts">
@@ -23,7 +32,7 @@ export function WeeklyWorkouts({ week }: { week: string }) {
             key={w.id}
             aria-pressed={w.id === selected}
             aria-expanded={w.id === selected}
-            aria-controls="selected-workout-plan"
+            aria-controls={detailId}
             onClick={() => setSelected(w.id === selected ? null : w.id)}
           >
             <span>{w.day}</span>
@@ -37,7 +46,7 @@ export function WeeklyWorkouts({ week }: { week: string }) {
         ))}
       </div>
       {workout && (
-        <div className="workout-plan-detail" id="selected-workout-plan">
+        <div className="workout-plan-detail" id={detailId}>
           <h3>
             {workout.day}{" "}
             <span>

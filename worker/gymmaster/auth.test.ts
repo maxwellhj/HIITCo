@@ -48,7 +48,10 @@ describe("GymMaster connection-test login", () => {
   it("uses the documented fixed login endpoint and form fields, returning no password, key or token", async () => {
     const upstream = vi.spyOn(globalThis, "fetch").mockResolvedValue(good());
     const env = environment(),
-      response = await worker.fetch(post(), env);
+      response = await worker.fetch(
+        post({ ...credentials, remember: true }),
+        env,
+      );
     expect(response.status).toBe(200);
     const text = await response.text();
     for (const value of [
@@ -125,12 +128,62 @@ describe("GymMaster connection-test login", () => {
       );
       const response = await worker.fetch(post(), environment());
       expect(response.status).toBe(200);
-      expect(response.headers.get("Set-Cookie")).toContain(
-        `Max-Age=${Math.min(Number(expires), 3600)}`,
-      );
+      expect(response.headers.get("Set-Cookie")).not.toContain("Max-Age");
       expect((await response.json()).expiresAt).toBeLessThanOrEqual(
         Date.now() + 3600000,
       );
+    }
+  });
+  it("persists only opted-in sessions and never outlives the provider or seven days", async () => {
+    const provider = vi.spyOn(globalThis, "fetch");
+    for (const [expires, ttl] of [
+      [30, 30],
+      [3600, 3600],
+      [86400, 86400],
+      [2592000, 604800],
+    ]) {
+      provider.mockResolvedValueOnce(
+        good({ token: "token", expires, memberid: 42 }),
+      );
+      const response = await worker.fetch(
+        post({ ...credentials, remember: true }),
+        environment(),
+      );
+      expect(response.status).toBe(200);
+      expect(response.headers.get("Set-Cookie")).toContain(`Max-Age=${ttl}`);
+      const session = await readSession(
+        new Request("https://example.test", {
+          headers: {
+            Cookie: response.headers.get("Set-Cookie")!.split(";")[0],
+          },
+        }),
+        secret,
+      );
+      expect(session?.expiresAt).toBeLessThanOrEqual(Date.now() + ttl * 1000);
+      expect(session).not.toBeNull();
+      expect(
+        await readSession(
+          new Request("https://example.test", {
+            headers: {
+              Cookie: response.headers.get("Set-Cookie")!.split(";")[0],
+            },
+          }),
+          secret,
+          session!.expiresAt + 1,
+        ),
+      ).toBeNull();
+    }
+    provider.mockResolvedValueOnce(good());
+    const ordinary = await worker.fetch(
+      post({ ...credentials, remember: false }),
+      environment(),
+    );
+    expect(ordinary.headers.get("Set-Cookie")).not.toContain("Max-Age");
+    for (const remember of ["true", 1, null]) {
+      expect(
+        (await worker.fetch(post({ ...credentials, remember }), environment()))
+          .status,
+      ).toBe(400);
     }
   });
   it("rejects cross-origin or origin-less login and logout before contacting GymMaster", async () => {

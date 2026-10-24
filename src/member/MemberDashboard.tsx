@@ -21,6 +21,7 @@ export function MemberDashboard({
   refresh,
   busy,
   progress = false,
+  showStats = false,
 }: {
   profile: GymMasterMemberProfile;
   days: DailyVisits[] | null;
@@ -31,6 +32,7 @@ export function MemberDashboard({
   refresh: () => void;
   busy: boolean;
   progress?: boolean;
+  showStats?: boolean;
 }) {
   const [week, setWeek] = useState(0),
     [selected, setSelected] = useState<{
@@ -71,79 +73,83 @@ export function MemberDashboard({
     : [];
   return (
     <div className="home-overview member-overview">
-      <Card className="member-total">
-        <span>Total club visits</span>
-        <strong>{total ?? "Not supplied"}</strong>
-        <small>Recorded by GymMaster</small>
-      </Card>
-      <div className="home-stat-row">
-        <Card className="home-stat goal-stat">
-          <h2>
-            <Bullseye size={18} />
-            <span>Your weekly goal</span>
-          </h2>
-          <div
-            className="progress-ring"
-            style={{
-              background: `conic-gradient(var(--blue) ${Math.min(100, ((current?.total ?? 0) / target) * 100)}%, var(--ring-track) 0)`,
-            }}
-            role="img"
-            aria-label={
-              count === "—"
-                ? "Weekly attendance unavailable"
-                : `${count} visits recorded, suggested goal ${target}`
-            }
-          >
-            <div>
-              <strong>
-                {count}
-                <span>/{target}</span>
-              </strong>
-            </div>
+      {(progress || showStats) && (
+        <div className="member-stats-dropdown" id="member-home-stats">
+          <div className="home-stat-row">
+            <Card className="home-stat goal-stat">
+              <h2>
+                <Bullseye size={18} />
+                <span>Your weekly goal</span>
+              </h2>
+              <div
+                className="progress-ring"
+                style={{
+                  background: `conic-gradient(var(--blue) ${Math.min(100, ((current?.total ?? 0) / target) * 100)}%, var(--ring-track) 0)`,
+                }}
+                role="img"
+                aria-label={
+                  count === "—"
+                    ? "Weekly attendance unavailable"
+                    : `${count} visits recorded, suggested goal ${target}`
+                }
+              >
+                <div>
+                  <strong>
+                    {count}
+                    <span>/{target}</span>
+                  </strong>
+                </div>
+              </div>
+              <p>
+                {!current
+                  ? "Attendance unavailable"
+                  : current.total >= target
+                    ? "Goal reached!"
+                    : current.complete
+                      ? `${target - current.total} to go this week`
+                      : "Waiting for complete data"}
+              </p>
+            </Card>
+            <Card className="home-stat">
+              <h2>
+                <Flame size={17} />
+                <span>Weekly streak</span>
+              </h2>
+              <div className="home-stat-value">
+                <strong>{streak}</strong>
+                <span>weeks</span>
+              </div>
+              <p>
+                {streakCount == null
+                  ? "Attendance unavailable"
+                  : streakExact
+                    ? "Consecutive attended weeks"
+                    : "Confirmed weeks · limited history"}
+              </p>
+            </Card>
+            <Card className="home-stat">
+              <h2>
+                <Trophy size={17} />
+                <span>Next milestone</span>
+              </h2>
+              <div className="home-stat-value">
+                <strong>{next ?? "—"}</strong>
+                <span>visits</span>
+              </div>
+              <p>
+                {next === null || total === null
+                  ? "Total visits unavailable"
+                  : `${next - total} to go · ${total} done`}
+              </p>
+            </Card>
           </div>
-          <p>
-            {!current
-              ? "Attendance unavailable"
-              : current.total >= target
-                ? "Goal reached!"
-                : current.complete
-                  ? `${target - current.total} to go this week`
-                  : "Waiting for complete data"}
+          <p className="small muted">
+            Suggested goal: 3 visits a week. Streaks count consecutive attended
+            weeks. “+” means at least this many.
           </p>
-        </Card>
-        <Card className="home-stat">
-          <h2>
-            <Flame size={17} />
-            <span>Weekly streak</span>
-          </h2>
-          <div className="home-stat-value">
-            <strong>{streak}</strong>
-            <span>weeks</span>
-          </div>
-          <p>
-            {streakCount == null
-              ? "Attendance unavailable"
-              : streakExact
-                ? "Consecutive attended weeks"
-                : "Confirmed weeks · limited history"}
-          </p>
-        </Card>
-        <Card className="home-stat">
-          <h2>
-            <Trophy size={17} />
-            <span>Next milestone</span>
-          </h2>
-          <div className="home-stat-value">
-            <strong>{next ?? "—"}</strong>
-            <span>visits</span>
-          </div>
-          <p>
-            {next === null || total === null
-              ? "Total visits unavailable"
-              : `${next - total} to go · ${total} done`}
-          </p>
-        </Card>
-      </div>
+        </div>
+      )}
+      {!progress && <WeeklyWorkouts week={weekKey(today)} />}
       <Card className="home-attendance">
         <div className="section-top">
           <h2>Your weekly attendance</h2>
@@ -281,11 +287,6 @@ export function MemberDashboard({
           minutes to update. Missing dates aren’t treated as zero.
         </p>
       </Card>
-      <p className="small muted">
-        Suggested goal: 3 visits a week. Streaks count consecutive weeks with at
-        least one visit. “+” means at least this many. Three weeks are shown;
-        streaks use all attendance returned by GymMaster.
-      </p>
       {progress ? (
         <Card>
           <h2>Your milestones</h2>
@@ -301,7 +302,6 @@ export function MemberDashboard({
         </Card>
       ) : (
         <>
-          <WeeklyWorkouts week={weekKey(today)} />
           <Card className="club-events">
             <h2>
               <CalendarDays size={17} /> Upcoming club events
