@@ -104,3 +104,62 @@ export function exerciseProgress(
         : null,
   };
 }
+
+/** Validate and copy the bounded account log; ignore no identity supplied by a client. */
+export function parseTrainingLog(
+  value: unknown,
+  today: string,
+): TrainingLogData {
+  if (!value || typeof value !== "object") throw Error("Invalid log");
+  const log = value as TrainingLogData;
+  if (
+    log.version !== 1 ||
+    !Array.isArray(log.exercises) ||
+    log.exercises.length < 1 ||
+    log.exercises.length > 200 ||
+    !Array.isArray(log.sessions) ||
+    log.sessions.length > 1000
+  )
+    throw Error("Invalid log");
+  const ids = new Set<string>();
+  const names = new Set<string>();
+  const safeId = (v: unknown): v is string =>
+    typeof v === "string" && /^[a-zA-Z0-9-]{1,80}$/.test(v);
+  const exercises = log.exercises.map((e) => {
+    if (
+      !e ||
+      !safeId(e.id) ||
+      typeof e.name !== "string" ||
+      !e.name.trim() ||
+      e.name.length > 60 ||
+      ids.has(e.id) ||
+      names.has(e.name.trim().toLowerCase())
+    )
+      throw Error("Invalid exercise");
+    ids.add(e.id);
+    names.add(e.name.trim().toLowerCase());
+    return { id: e.id, name: e.name.trim() };
+  });
+  const sessionsSeen = new Set<string>();
+  const sessions = log.sessions.map((s) => {
+    if (
+      !s ||
+      !safeId(s.id) ||
+      !ids.has(s.exerciseId) ||
+      sessionsSeen.has(s.id) ||
+      typeof s.date !== "string" ||
+      typeof s.createdAt !== "string"
+    )
+      throw Error("Invalid session");
+    validateSession(s, today);
+    sessionsSeen.add(s.id);
+    return {
+      id: s.id,
+      exerciseId: s.exerciseId,
+      date: s.date,
+      createdAt: s.createdAt,
+      sets: s.sets.map((set) => ({ reps: set.reps, weight: set.weight })),
+    };
+  });
+  return { version: 1, exercises, sessions };
+}

@@ -1,3 +1,4 @@
+import { MemberTraining } from "./MemberTraining";
 import { useEffect, useRef, useState } from "react";
 import {
   CalendarDays,
@@ -45,6 +46,7 @@ function route(): Page {
     : "home";
 }
 export function MemberApp({ onDemo }: { onDemo: () => void }) {
+  const [logRoute, setLogRoute] = useState(location.hash);
   const [showHomeStats, setShowHomeStats] = useState(false);
   const [phase, setPhase] = useState<
     "checking" | "signedout" | "ready" | "error"
@@ -185,6 +187,7 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
     void load();
     const hash = () => {
       setPage(route());
+      setLogRoute(location.hash);
       window.scrollTo({ top: 0, behavior: "instant" });
     };
     const visible = () => {
@@ -428,19 +431,16 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
           ) : page === "messages" ? (
             <Messages />
           ) : (
-            <Card>
-              <h2>Member training logs are being prepared</h2>
-              <p>
-                Saving training logs securely to your member account is the next
-                step. Your account does not use the fictional demo’s exercise
-                records.
-              </p>
-            </Card>
+            <MemberTraining
+              key={logRoute}
+              firstName={profile.firstName}
+              route={logRoute}
+            />
           )}
           <p className="member-source small muted">
             Your name and total visits come from GymMaster.{" "}
             {page === "home" || page === "events" || page === "messages"
-              ? "Club workouts, events and messages are still demo content."
+              ? "Workouts come from the club’s published plan. Events and messages are still demo content."
               : ""}
           </p>
         </main>

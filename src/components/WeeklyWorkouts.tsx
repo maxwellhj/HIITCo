@@ -1,10 +1,58 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card } from "./UI";
 import { StationCarousel } from "./StationCarousel";
+import { memberApi, MemberApiError } from "../member/api";
+import {
+  parsePublishedWorkout,
+  workoutPlan,
+  type PublishedWorkout,
+} from "../domain/publishedWorkouts";
 import { weeklyWorkoutPlan } from "../data/workoutPlan";
 import { dateKey, formatDate, shiftDate } from "../domain/attendance";
-export function WeeklyWorkouts({ week }: { week: string }) {
+export function WeeklyWorkouts({
+  week,
+  published = false,
+}: {
+  week: string;
+  published?: boolean;
+}) {
+  const [feed, setFeed] = useState<
+    Record<string, { workout?: PublishedWorkout; error?: string }>
+  >({});
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    if (!published) return;
+    const controller = new AbortController();
+    setFeed({});
+    for (const [pair, plan] of weeklyWorkoutPlan.entries()) {
+      const date = shiftDate(week, pair);
+      void memberApi(`workouts?date=${date}`, undefined, controller.signal)
+        .then((result) => {
+          const workout = parsePublishedWorkout(result.workout, date);
+          if (!controller.signal.aborted)
+            setFeed((previous) => ({ ...previous, [plan.id]: { workout } }));
+        })
+        .catch((error) => {
+          if (controller.signal.aborted) return;
+          const message =
+            error instanceof MemberApiError &&
+            error.code === "workout_unpublished"
+              ? "This workout hasn’t been published yet."
+              : error instanceof MemberApiError &&
+                  error.code === "workout_overlap"
+                ? "Two published plans cover this date. Please ask your coach to check the schedule."
+                : error instanceof MemberApiError && error.status === 401
+                  ? "Please sign in again to view your workouts."
+                  : "We couldn’t load this workout. Please try again.";
+          setFeed((previous) => ({
+            ...previous,
+            [plan.id]: { error: message },
+          }));
+        });
+    }
+    return () => controller.abort();
+  }, [week, published, retry]);
   const detailId = useId();
   const [selected, setSelected] = useState<string | null>(() => {
     const day = new Date(dateKey(new Date()) + "T12:00:00Z").getUTCDay();
@@ -15,12 +63,18 @@ export function WeeklyWorkouts({ week }: { week: string }) {
       )?.id ?? null
     );
   });
-  const workout = weeklyWorkoutPlan.find((w) => w.id === selected);
+  const selectedPair = weeklyWorkoutPlan.findIndex((w) => w.id === selected);
+  const entry = selected ? feed[selected] : undefined;
+  const workout = published
+    ? entry?.workout
+      ? workoutPlan(entry.workout, selectedPair)
+      : undefined
+    : weeklyWorkoutPlan.find((w) => w.id === selected);
   return (
     <Card className="home-workouts">
       <div className="section-top">
         <h2>This week’s workout</h2>
-        <span className="pill">DEMO PLAN</span>
+        <span className="pill">{published ? "CLUB PLAN" : "DEMO PLAN"}</span>
       </div>
       <div
         className="workout-slate"
@@ -45,6 +99,19 @@ export function WeeklyWorkouts({ week }: { week: string }) {
           </button>
         ))}
       </div>
+      {published && selected && !workout && (
+        <div className="workout-feed-state" role="status">
+          <p>{entry?.error ?? "Loading your club workout…"}</p>
+          {entry?.error && (
+            <button
+              className="text-button"
+              onClick={() => setRetry((v) => v + 1)}
+            >
+              Try again
+            </button>
+          )}
+        </div>
+      )}
       {workout && (
         <div className="workout-plan-detail" id={detailId}>
           <h3>
@@ -55,12 +122,19 @@ export function WeeklyWorkouts({ week }: { week: string }) {
                 .join(" / ")}
             </span>
           </h3>
+          {published && entry?.workout && (
+            <p className="small muted">
+              {entry.workout.block} · Week {entry.workout.programWeek} ·
+              Published workout
+            </p>
+          )}
           <StationCarousel key={workout.id} workout={workout} />
         </div>
       )}
       <p className="workout-plan-note">
-        Sample station workouts for preview. Your club’s published plan will
-        appear here.
+        {published
+          ? "Published by your HIIT Co. coaches. Three-minute rounds · repeated day pairs."
+          : "Sample station workouts for preview. Your club’s published plan will appear here."}
       </p>
     </Card>
   );

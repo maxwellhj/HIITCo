@@ -3,8 +3,11 @@ import { gymMasterVisits } from "./gymmaster/visits";
 import { gymMasterProfile } from "./gymmaster/profile";
 import { gymMasterWebhook, type WebhookEnv } from "./gymmaster/webhook";
 import { gymMasterCheckins } from "./gymmaster/checkins";
+import { memberTraining, type TrainingEnv } from "./training";
+export { MemberTrainingStore } from "./training";
+import { memberWorkouts } from "./workouts";
 export { GymMasterCheckinInbox } from "./gymmaster/webhookInbox";
-export interface Env extends AuthEnv, WebhookEnv {
+export interface Env extends AuthEnv, WebhookEnv, TrainingEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
 }
 
@@ -41,6 +44,10 @@ export default {
     if (checkinResponse) return checkinResponse;
     const profileResponse = await gymMasterProfile(request, env);
     if (profileResponse) return profileResponse;
+    const trainingResponse = await memberTraining(request, env);
+    if (trainingResponse) return trainingResponse;
+    const workoutResponse = await memberWorkouts(request, env);
+    if (workoutResponse) return workoutResponse;
     const visitsResponse = await gymMasterVisits(request, env);
     if (visitsResponse) return visitsResponse;
     if (path === "/api/gymmaster" || path.startsWith("/api/gymmaster/")) {

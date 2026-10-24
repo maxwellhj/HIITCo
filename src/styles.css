@@ -3007,3 +3007,8 @@ td > svg {
 @media (hover: hover) {
   .home-library-button:hover { box-shadow: 0 5px 10px rgb(23 25 28 / 5%), 0 16px 30px -10px rgb(23 25 28 / 18%); }
 }
+
+.training-fieldset { border: 0; padding: 0; min-width: 0; }
+.published-station-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.65; margin: 14px 0; }
+.station-slide .station-log-button { font-size: 11px; margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; }
+.workout-feed-state { padding: 20px 0 10px; font-size: 13px; line-height: 1.6; }

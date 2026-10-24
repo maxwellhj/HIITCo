@@ -7,6 +7,8 @@ export interface StationExercise {
 export interface WorkoutStation {
   number: number;
   durationMinutes: 3;
+  workoutText?: string;
+  chow?: boolean;
   exercises: readonly StationExercise[];
 }
 export interface PlannedWorkout {

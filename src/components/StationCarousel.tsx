@@ -114,6 +114,12 @@ export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
                   <h4>Station {station.number}</h4>
                   <span>{station.durationMinutes} min</span>
                 </div>
+                {station.chow && <span className="pill">CHOW</span>}
+                {station.workoutText !== undefined && (
+                  <p className="published-station-text">
+                    {station.workoutText || "Workout details coming soon."}
+                  </p>
+                )}
                 <ul>
                   {station.exercises.map((exercise, i) => (
                     <li key={`${exercise.name}-${i}`}>
@@ -135,6 +141,11 @@ export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
                     </li>
                   ))}
                 </ul>
+                {station.workoutText !== undefined && (
+                  <a className="text-button station-log-button" href="#log">
+                    Log weights <Pencil size={13} />
+                  </a>
+                )}
               </article>
             ))}
           </div>

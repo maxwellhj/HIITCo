@@ -16,6 +16,7 @@
   ],
   "durable_objects": {
     "bindings": [
+      { "name": "MEMBER_TRAINING_LOGS", "class_name": "MemberTrainingStore" },
       {
         "name": "GYMMASTER_CHECKIN_INBOX",
         "class_name": "GymMasterCheckinInbox",
@@ -26,6 +27,10 @@
     {
       "tag": "gymmaster-checkin-inbox-v1",
       "new_sqlite_classes": ["GymMasterCheckinInbox"],
+    },
+    {
+      "tag": "member-training-v1",
+      "new_sqlite_classes": ["MemberTrainingStore"],
     },
   ],
   "assets": {

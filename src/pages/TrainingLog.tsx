@@ -44,11 +44,20 @@ function load(memberId: string) {
 export function TrainingLog({
   member,
   initialExerciseId = null,
+  accountStorage,
 }: {
-  member: MemberProfile;
+  member: Pick<MemberProfile, "id" | "firstName">;
   initialExerciseId?: string | null;
+  accountStorage?: {
+    initial: TrainingLogData;
+    save: (next: TrainingLogData) => Promise<void>;
+  };
 }) {
-  const [state, setState] = useState(() => load(member.id));
+  const [state, setState] = useState(() =>
+    accountStorage
+      ? { data: accountStorage.initial, error: "" }
+      : load(member.id),
+  );
   const [exerciseId, setExerciseId] = useState<string | null>(
       initialExerciseId,
     ),
@@ -61,12 +70,19 @@ export function TrainingLog({
     [deleting, setDeleting] = useState<string | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
   const today = dateKey(new Date()),
     data = state.data,
     exercise = data?.exercises.find((e) => e.id === exerciseId);
-  function save(next: TrainingLogData) {
-    writeTrainingLog(member.id, next);
-    setState({ data: next, error: "" });
+  async function save(next: TrainingLogData) {
+    setSaving(true);
+    try {
+      if (accountStorage) await accountStorage.save(next);
+      else writeTrainingLog(member.id, next);
+      setState({ data: next, error: "" });
+    } finally {
+      setSaving(false);
+    }
   }
   function clearForm() {
     setDate(today);
@@ -92,10 +108,13 @@ export function TrainingLog({
     );
   const stats = exercise ? exerciseProgress(data.sessions, exercise.id) : null;
   return (
-    <div className="training-space">
+    <fieldset className="training-space training-fieldset" disabled={saving}>
+      {saving && <p role="status">Saving your log…</p>}
       <p className="training-local-note">
-        Your log, {member.firstName} · Saved on this device only. It won’t sync
-        between phones or browsers yet.
+        Your log, {member.firstName} ·{" "}
+        {accountStorage
+          ? "Saved securely to your member account."
+          : "Saved on this device only. It won’t sync between phones or browsers yet."}
       </p>
       {notice && (
         <div className="training-notice" role="status">
@@ -127,7 +146,7 @@ export function TrainingLog({
           {adding && (
             <Card className="add-exercise">
               <form
-                onSubmit={(event) => {
+                onSubmit={async (event) => {
                   event.preventDefault();
                   setError("");
                   const name = exerciseName.trim().replace(/\s+/g, " ");
@@ -146,7 +165,7 @@ export function TrainingLog({
                   }
                   try {
                     const id = crypto.randomUUID();
-                    save({
+                    await save({
                       ...data,
                       exercises: [...data.exercises, { id, name }],
                     });
@@ -154,9 +173,11 @@ export function TrainingLog({
                     setExerciseName("");
                     setSearch("");
                     openExercise(id);
-                  } catch {
+                  } catch (err) {
                     setError(
-                      "Couldn’t save the exercise. Your changes are still here; check browser storage and try again.",
+                      accountStorage && err instanceof Error
+                        ? err.message
+                        : "Couldn’t save the exercise. Your changes are still here; try again.",
                     );
                   }
                 }}
@@ -290,7 +311,7 @@ export function TrainingLog({
               {editing ? "Edit session" : "Record a session"}
             </h2>
             <form
-              onSubmit={(event) => {
+              onSubmit={async (event) => {
                 event.preventDefault();
                 setError("");
                 setNotice("");
@@ -307,7 +328,7 @@ export function TrainingLog({
                     })),
                   };
                   validateSession(session, today);
-                  save({
+                  await save({
                     ...data,
                     sessions: editing
                       ? data.sessions.map((s) =>
@@ -530,9 +551,9 @@ export function TrainingLog({
                         </button>
                         <button
                           className="primary"
-                          onClick={() => {
+                          onClick={async () => {
                             try {
-                              save({
+                              await save({
                                 ...data,
                                 sessions: data.sessions.filter(
                                   (s) => s.id !== session.id,
@@ -543,9 +564,11 @@ export function TrainingLog({
                               setNotice(
                                 "Session deleted. Your charts are up to date.",
                               );
-                            } catch {
+                            } catch (err) {
                               setError(
-                                "Couldn’t delete this session. Please try again.",
+                                accountStorage && err instanceof Error
+                                  ? err.message
+                                  : "Couldn’t delete this session. Please try again.",
                               );
                             }
                           }}
@@ -566,6 +589,6 @@ export function TrainingLog({
           </section>
         </>
       )}
-    </div>
+    </fieldset>
   );
 }

@@ -149,7 +149,7 @@ export function MemberDashboard({
           </p>
         </div>
       )}
-      {!progress && <WeeklyWorkouts week={weekKey(today)} />}
+      {!progress && <WeeklyWorkouts week={weekKey(today)} published />}
       <Card className="home-attendance">
         <div className="section-top">
           <h2>Your weekly attendance</h2>
