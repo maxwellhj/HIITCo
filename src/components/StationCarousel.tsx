@@ -1,8 +1,33 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Clock, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
 import type { PlannedWorkout } from "../data/workoutPlan";
 
+import {
+  canLogStation,
+  workoutExerciseMatches,
+} from "../domain/workoutExercises";
 const PER_PAGE = 3;
+function StationText({ text, station }: { text: string; station: number }) {
+  const matches = workoutExerciseMatches(text, station);
+  const parts: (string | React.ReactElement)[] = [];
+  let from = 0;
+  for (const match of matches) {
+    parts.push(text.slice(from, match.start));
+    parts.push(
+      <a
+        key={match.start}
+        className="station-inline-exercise"
+        href={`#log/${match.exercise.id}`}
+        aria-label={`Log ${match.exercise.name}`}
+      >
+        {text.slice(match.start, match.end)}
+      </a>,
+    );
+    from = match.end;
+  }
+  parts.push(text.slice(from));
+  return <p className="published-station-text">{parts}</p>;
+}
 export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
   const [active, setActive] = useState(0);
   const track = useRef<HTMLDivElement>(null),
@@ -39,10 +64,6 @@ export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
   return (
     <div className="station-carousel">
       <div className="station-toolbar">
-        <span>
-          <Clock size={14} />
-          3-minute rounds
-        </span>
         <div>
           <button
             type="button"
@@ -112,39 +133,37 @@ export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
               >
                 <div className="station-slide-heading">
                   <h4>Station {station.number}</h4>
-                  <span>{station.durationMinutes} min</span>
                 </div>
                 {station.chow && <span className="pill">CHOW</span>}
                 {station.workoutText !== undefined && (
-                  <p className="published-station-text">
-                    {station.workoutText || "Workout details coming soon."}
-                  </p>
+                  <StationText
+                    text={station.workoutText || "Workout details coming soon."}
+                    station={station.number}
+                  />
                 )}
-                <ul>
-                  {station.exercises.map((exercise, i) => (
-                    <li key={`${exercise.name}-${i}`}>
-                      {exercise.logExerciseId ? (
-                        <a
-                          className="station-exercise-link"
-                          href={`#log/${encodeURIComponent(exercise.logExerciseId)}`}
-                          aria-label={`Log ${exercise.name}`}
-                        >
-                          <strong>{exercise.name}</strong>
-                          <Pencil size={13} />
-                        </a>
-                      ) : (
-                        <strong className="station-movement">
-                          {exercise.name}
-                        </strong>
-                      )}
-                      <p>{exercise.instruction}</p>
-                    </li>
-                  ))}
-                </ul>
-                {station.workoutText !== undefined && (
-                  <a className="text-button station-log-button" href="#log">
-                    Log weights <Pencil size={13} />
-                  </a>
+                {station.workoutText === undefined && (
+                  <ul>
+                    {station.exercises.map((exercise, i) => (
+                      <li key={`${exercise.name}-${i}`}>
+                        {exercise.logExerciseId &&
+                        canLogStation(station.number) ? (
+                          <a
+                            className="station-exercise-link"
+                            href={`#log/${encodeURIComponent(exercise.logExerciseId)}`}
+                            aria-label={`Log ${exercise.name}`}
+                          >
+                            <strong>{exercise.name}</strong>
+                            <Pencil size={13} />
+                          </a>
+                        ) : (
+                          <strong className="station-movement">
+                            {exercise.name}
+                          </strong>
+                        )}
+                        <p>{exercise.instruction}</p>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </article>
             ))}

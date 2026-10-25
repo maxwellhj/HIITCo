@@ -1,3 +1,4 @@
+import { prepareWorkoutExercise } from "../domain/workoutExercises";
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -53,13 +54,21 @@ export function TrainingLog({
     save: (next: TrainingLogData) => Promise<void>;
   };
 }) {
-  const [state, setState] = useState(() =>
-    accountStorage
+  const [state, setState] = useState(() => {
+    const loaded = accountStorage
       ? { data: accountStorage.initial, error: "" }
-      : load(member.id),
-  );
-  const [exerciseId, setExerciseId] = useState<string | null>(
-      initialExerciseId,
+      : load(member.id);
+    return loaded.data && initialExerciseId
+      ? {
+          ...loaded,
+          data: prepareWorkoutExercise(loaded.data, initialExerciseId).log,
+        }
+      : loaded;
+  });
+  const [exerciseId, setExerciseId] = useState<string | null>(() =>
+      state.data && initialExerciseId
+        ? prepareWorkoutExercise(state.data, initialExerciseId).exerciseId
+        : initialExerciseId,
     ),
     [exerciseName, setExerciseName] = useState(""),
     [adding, setAdding] = useState(false),

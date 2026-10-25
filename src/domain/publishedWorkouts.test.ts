@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { workoutExerciseMatches } from "./workoutExercises";
 import { parsePublishedWorkout, workoutPlan } from "./publishedWorkouts";
 const fixture = {
   date: "2026-10-26",
@@ -12,7 +13,7 @@ const fixture = {
   stations: Array.from({ length: 9 }, (_, i) => ({
     station: i + 1,
     workout:
-      i === 0
+      i === 1
         ? "Back squat 5 reps\nBench Press 8 reps"
         : "4x 1,2,3\n3x Jab–cross",
     chow: i === 0,
@@ -24,21 +25,23 @@ describe("builder workout adapter", () => {
     expect(result.stations).toHaveLength(9);
     expect(result.stations[0].workoutText).toBe(fixture.stations[0].workout);
     expect(result.stations[0].chow).toBe(true);
-    expect(result.stations[0].exercises.map((e) => e.logExerciseId)).toEqual([
-      "back-squat",
-      "bench-press",
-    ]);
-    expect(result.stations[1].exercises).toEqual([]);
+    expect(result.stations[0].exercises).toEqual([]);
+    expect(
+      workoutExerciseMatches(result.stations[1].workoutText!, 2).map(
+        (m) => m.exercise.id,
+      ),
+    ).toEqual(["back-squat", "bench-press"]);
     expect(result.dayOffsets).toEqual([0, 3]);
   });
   it("keeps exercise variants out of unrelated progress histories", () => {
     const value = structuredClone(fixture);
-    value.stations[0].workout =
+    value.stations[1].workout =
       "Trap Bar Deadlifts 6 reps\nDB Bench Press 8 reps";
     expect(
-      workoutPlan(parsePublishedWorkout(value, value.date), 0).stations[0]
-        .exercises,
-    ).toEqual([]);
+      workoutExerciseMatches(value.stations[1].workout, 2).map(
+        (m) => m.exercise.id,
+      ),
+    ).toEqual(["trap-bar-deadlift", "db-bench-press"]);
   });
   it("rejects malformed or wrongly dated feeds", () => {
     for (const value of [

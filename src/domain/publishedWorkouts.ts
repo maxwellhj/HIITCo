@@ -1,4 +1,4 @@
-import { validDate, defaultExercises } from "./training";
+import { validDate } from "./training";
 import { weekKey } from "./attendance";
 import type { PlannedWorkout } from "../data/workoutPlan";
 export interface PublishedWorkout {
@@ -59,16 +59,6 @@ export function parsePublishedWorkout(
     })),
   };
 }
-// Link only explicit movement names; variants such as trap-bar deadlift or DB bench
-// need their own exercise history rather than being merged into a different lift.
-const aliases: Record<string, RegExp> = {
-  "back-squat": /(?:^|\n)\s*(?:\d+\s*[x×]\s*)?back\s+squats?\b/i,
-  "front-squat": /(?:^|\n)\s*(?:\d+\s*[x×]\s*)?front\s+squats?\b/i,
-  deadlift: /(?:^|\n)\s*(?:\d+\s*[x×]\s*)?deadlifts?\b/i,
-  "bench-press": /(?:^|\n)\s*(?:\d+\s*[x×]\s*)?bench\s+press\b/i,
-  "shoulder-press": /(?:^|\n)\s*(?:\d+\s*[x×]\s*)?shoulder\s+press\b/i,
-  "barbell-row": /(?:^|\n)\s*(?:\d+\s*[x×]\s*)?barbell\s+rows?\b/i,
-};
 export function workoutPlan(w: PublishedWorkout, pair: number): PlannedWorkout {
   return {
     id: ["monday", "tuesday", "wednesday"][pair],
@@ -85,9 +75,7 @@ export function workoutPlan(w: PublishedWorkout, pair: number): PlannedWorkout {
       durationMinutes: 3,
       workoutText: s.workout,
       chow: s.chow,
-      exercises: defaultExercises
-        .filter((e) => aliases[e.id]?.test(s.workout))
-        .map((e) => ({ name: e.name, instruction: "", logExerciseId: e.id })),
+      exercises: [],
     })),
   };
 }

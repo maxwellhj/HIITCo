@@ -3012,3 +3012,8 @@ td > svg {
 .published-station-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; line-height: 1.65; margin: 14px 0; }
 .station-slide .station-log-button { font-size: 11px; margin-top: 12px; display: inline-flex; align-items: center; gap: 6px; }
 .workout-feed-state { padding: 20px 0 10px; font-size: 13px; line-height: 1.6; }
+
+.station-toolbar { justify-content: flex-end; }
+.station-inline-exercise { color: #27618c; font-weight: 600; text-decoration: underline; text-decoration-color: #96bfe1; text-underline-offset: 3px; }
+.station-inline-exercise:hover { color: #173f5d; text-decoration-color: currentColor; }
+.station-inline-exercise:focus-visible { border-radius: 2px; }

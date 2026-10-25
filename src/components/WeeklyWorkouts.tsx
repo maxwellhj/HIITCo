@@ -140,7 +140,7 @@ export function WeeklyWorkouts({
       )}
       <p className="workout-plan-note">
         {published
-          ? "Published by your HIIT Co. coaches. Three-minute rounds · repeated day pairs."
+          ? "Published by your HIIT Co. coaches. Repeated day pairs."
           : "Sample station workouts for preview. Your club’s published plan will appear here."}
       </p>
     </Card>
