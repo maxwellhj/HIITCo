@@ -1,3 +1,4 @@
+import { MemberChow } from "./ChowScores";
 import { MemberTraining } from "./MemberTraining";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -430,6 +431,8 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
             <Skills />
           ) : page === "messages" ? (
             <Messages />
+          ) : logRoute === "#log/chow" ? (
+            <MemberChow />
           ) : (
             <MemberTraining
               key={logRoute}

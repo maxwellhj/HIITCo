@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Pencil } from "lucide-react";
-import type { PlannedWorkout } from "../data/workoutPlan";
+import type { PlannedWorkout, WorkoutStation } from "../data/workoutPlan";
 
 import {
   canLogStation,
@@ -28,7 +28,13 @@ function StationText({ text, station }: { text: string; station: number }) {
   parts.push(text.slice(from));
   return <p className="published-station-text">{parts}</p>;
 }
-export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
+export function StationCarousel({
+  workout,
+  onChow,
+}: {
+  workout: PlannedWorkout;
+  onChow?: (station: WorkoutStation) => void;
+}) {
   const [active, setActive] = useState(0);
   const track = useRef<HTMLDivElement>(null),
     current = useRef(0);
@@ -134,7 +140,19 @@ export function StationCarousel({ workout }: { workout: PlannedWorkout }) {
                 <div className="station-slide-heading">
                   <h4>Station {station.number}</h4>
                 </div>
-                {station.chow && <span className="pill">CHOW</span>}
+                {station.chow &&
+                  (onChow ? (
+                    <button
+                      type="button"
+                      className="pill chow-button"
+                      aria-label={`Record CHOW score for Station ${station.number}`}
+                      onClick={() => onChow(station)}
+                    >
+                      CHOW
+                    </button>
+                  ) : (
+                    <span className="pill">CHOW</span>
+                  ))}
                 {station.workoutText !== undefined && (
                   <StationText
                     text={station.workoutText || "Workout details coming soon."}

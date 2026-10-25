@@ -1,3 +1,4 @@
+import { ChowDialog, type ChowSeed } from "../member/ChowScores";
 import { useEffect, useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card } from "./UI";
@@ -21,6 +22,7 @@ export function WeeklyWorkouts({
     Record<string, { workout?: PublishedWorkout; error?: string }>
   >({});
   const [retry, setRetry] = useState(0);
+  const [activeChow, setActiveChow] = useState<ChowSeed | null>(null);
   useEffect(() => {
     if (!published) return;
     const controller = new AbortController();
@@ -75,7 +77,7 @@ export function WeeklyWorkouts({
     <Card className="home-workouts">
       <div className="section-top">
         <h2>This week’s workout</h2>
-        <span className="pill">{published ? "CLUB PLAN" : "DEMO PLAN"}</span>
+        {!published && <span className="pill">DEMO PLAN</span>}
       </div>
       {published && (
         <p className="small muted workout-week-label">
@@ -135,14 +137,36 @@ export function WeeklyWorkouts({
               Published workout
             </p>
           )}
-          <StationCarousel key={workout.id} workout={workout} />
+          <StationCarousel
+            key={workout.id}
+            workout={workout}
+            onChow={
+              published && entry?.workout
+                ? (station) =>
+                    setActiveChow({
+                      block: entry.workout!.block,
+                      weekBeginning: entry.workout!.weekBeginning,
+                      programWeek: entry.workout!.programWeek,
+                      station: station.number,
+                      workout: station.workoutText ?? "",
+                    })
+                : undefined
+            }
+          />
         </div>
       )}
-      <p className="workout-plan-note">
-        {published
-          ? "Published by your HIIT Co. coaches. Repeated day pairs."
-          : "Sample station workouts for preview. Your club’s published plan will appear here."}
-      </p>
+      {!published && (
+        <p className="workout-plan-note">
+          Sample station workouts for preview. Your club’s published plan will
+          appear here.
+        </p>
+      )}
+      {activeChow && (
+        <ChowDialog
+          challenge={activeChow}
+          onClose={() => setActiveChow(null)}
+        />
+      )}
     </Card>
   );
 }

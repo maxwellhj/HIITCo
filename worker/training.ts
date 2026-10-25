@@ -1,3 +1,4 @@
+import { emptyChowLog, parseChowLog } from "../src/domain/chow";
 import { apiJson, limitedText, type AuthEnv } from "./gymmaster/auth";
 import { readSession, clearSessionCookie } from "./gymmaster/session";
 import { emptyTrainingLog, parseTrainingLog } from "../src/domain/training";
@@ -79,7 +80,11 @@ export async function memberTraining(
   env: TrainingEnv,
 ): Promise<Response | null> {
   const url = new URL(request.url);
-  if (url.pathname !== "/api/gymmaster/training") return null;
+  if (
+    !["/api/gymmaster/training", "/api/gymmaster/chow"].includes(url.pathname)
+  )
+    return null;
+  const isChow = url.pathname.endsWith("/chow");
   if (!["GET", "POST"].includes(request.method))
     return apiJson({ error: "method_not_allowed" }, 405, {
       Allow: "GET, POST",
@@ -105,7 +110,7 @@ export async function memberTraining(
     if (
       !(
         await env.LOGIN_RATE_LIMITER.limit({
-          key: `training:${request.method}:${memberKey}`,
+          key: `${isChow ? "chow" : "training"}:${request.method}:${memberKey}`,
         })
       ).success
     )
@@ -115,10 +120,14 @@ export async function memberTraining(
     const store = env.MEMBER_TRAINING_LOGS.get(
       env.MEMBER_TRAINING_LOGS.idFromName(memberKey),
     );
+    const storageUrl = `https://training.internal/${isChow ? "chow" : "log"}`;
+    const encryptionContext = isChow ? `${memberKey}:chow-v1` : memberKey;
+    const parse = async (value: unknown) =>
+      isChow
+        ? parseChowLog(value, dateKey(new Date()))
+        : parseTrainingLog(value, dateKey(new Date()));
     if (request.method === "GET") {
-      const response = await store.fetch(
-        new Request("https://training.internal/log"),
-      );
+      const response = await store.fetch(new Request(storageUrl));
       if (!response.ok) throw Error();
       const result = (await response.json()) as {
         revision: number;
@@ -132,14 +141,15 @@ export async function memberTraining(
         throw Error();
       const log =
         result.sealed === null
-          ? emptyTrainingLog()
-          : parseTrainingLog(
+          ? isChow
+            ? emptyChowLog()
+            : emptyTrainingLog()
+          : await parse(
               await openTraining(
                 result.sealed,
                 env.GYMMASTER_API_KEY!,
-                memberKey,
+                encryptionContext,
               ),
-              dateKey(new Date()),
             );
       return apiJson({ log, revision: result.revision });
     }
@@ -159,14 +169,18 @@ export async function memberTraining(
         body.revision < 0
       )
         throw Error();
-      log = parseTrainingLog(body.log, dateKey(new Date()));
+      log = await parse(body.log);
       revision = body.revision;
     } catch {
       return apiJson({ error: "invalid_training_log" }, 400);
     }
-    const sealed = await sealTraining(log, env.GYMMASTER_API_KEY!, memberKey);
+    const sealed = await sealTraining(
+      log,
+      env.GYMMASTER_API_KEY!,
+      encryptionContext,
+    );
     const response = await store.fetch(
-      new Request("https://training.internal/log", {
+      new Request(storageUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sealed, revision }),
@@ -196,17 +210,20 @@ interface StoreState {
 /** Private per-member Durable Object. Only encrypted content reaches storage. */
 export class MemberTrainingStore {
   constructor(private state: StoreState) {
-    state.storage.sql.exec(
-      "CREATE TABLE IF NOT EXISTS training_log (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, sealed TEXT NOT NULL)",
-    );
+    for (const table of ["training_log", "chow_log"])
+      state.storage.sql.exec(
+        `CREATE TABLE IF NOT EXISTS ${table} (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, sealed TEXT NOT NULL)`,
+      );
   }
   async fetch(request: Request) {
-    if (new URL(request.url).pathname !== "/log")
+    const path = new URL(request.url).pathname;
+    if (!["/log", "/chow"].includes(path))
       return apiJson({ error: "not_found" }, 404);
+    const table = path === "/chow" ? "chow_log" : "training_log";
     if (request.method === "GET") {
       const result = this.state.storage.sql
         .exec<{ revision: number; sealed: string | null }>(
-          "SELECT COALESCE((SELECT revision FROM training_log WHERE id=1),0) AS revision,(SELECT sealed FROM training_log WHERE id=1) AS sealed",
+          `SELECT COALESCE((SELECT revision FROM ${table} WHERE id=1),0) AS revision,(SELECT sealed FROM ${table} WHERE id=1) AS sealed`,
         )
         .one();
       return apiJson(result);
@@ -227,12 +244,12 @@ export class MemberTrainingStore {
       const saved = this.state.storage.transactionSync(() => {
         const current = this.state.storage.sql
           .exec<{ revision: number }>(
-            "SELECT COALESCE((SELECT revision FROM training_log WHERE id=1),0) AS revision",
+            `SELECT COALESCE((SELECT revision FROM ${table} WHERE id=1),0) AS revision`,
           )
           .one().revision;
         if (current !== revision) return false;
         this.state.storage.sql.exec(
-          "INSERT INTO training_log(id,revision,sealed) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,sealed=excluded.sealed",
+          `INSERT INTO ${table}(id,revision,sealed) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET revision=excluded.revision,sealed=excluded.sealed`,
           revision + 1,
           sealed,
         );

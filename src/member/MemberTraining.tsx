@@ -95,10 +95,15 @@ export function MemberTraining({
     /* malformed link opens the exercise list */
   }
   return (
-    <TrainingLog
-      member={{ id: "authenticated-member", firstName }}
-      initialExerciseId={initial}
-      accountStorage={{ initial: data, save }}
-    />
+    <>
+      <a className="text-button member-chow-link" href="#log/chow">
+        CHOW scores
+      </a>
+      <TrainingLog
+        member={{ id: "authenticated-member", firstName }}
+        initialExerciseId={initial}
+        accountStorage={{ initial: data, save }}
+      />
+    </>
   );
 }
