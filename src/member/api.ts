@@ -46,7 +46,7 @@ export async function memberApi(
         ? result.providerStatus
         : undefined,
       typeof result.code === "string" &&
-        /^GM-CHECKINS-(?:CONFIG|LIMITER|LOOKUP|DECRYPT|FORMAT)$/.test(
+        /^(?:GM-CHECKINS-(?:CONFIG|LIMITER|LOOKUP|DECRYPT|FORMAT)|WORKOUT-(?:HTTP-[1-5][0-9]{2}|FORMAT|CONNECTION))$/.test(
           result.code,
         )
         ? result.code

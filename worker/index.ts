@@ -5,9 +5,9 @@ import { gymMasterWebhook, type WebhookEnv } from "./gymmaster/webhook";
 import { gymMasterCheckins } from "./gymmaster/checkins";
 import { memberTraining, type TrainingEnv } from "./training";
 export { MemberTrainingStore } from "./training";
-import { memberWorkouts } from "./workouts";
+import { memberWorkouts, type WorkoutEnv } from "./workouts";
 export { GymMasterCheckinInbox } from "./gymmaster/webhookInbox";
-export interface Env extends AuthEnv, WebhookEnv, TrainingEnv {
+export interface Env extends AuthEnv, WebhookEnv, TrainingEnv, WorkoutEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
 }
 

@@ -65,6 +65,55 @@ describe("published workout feed", () => {
     expect(options?.headers).toEqual({ Accept: "application/json" });
     expect(options?.redirect).toBe("manual");
   });
+  it("uses the direct builder binding without forwarding session cookies or using public fetch", async () => {
+    const upstream = vi.spyOn(globalThis, "fetch");
+    const direct = vi.fn(async (request: Request) => {
+      expect(request.url).toBe(
+        "https://hiit-co-workout-builder.maxwellhj.workers.dev/api/workouts/current?date=2026-10-26",
+      );
+      expect(request.method).toBe("GET");
+      expect(request.headers.get("cookie")).toBeNull();
+      expect(request.headers.get("authorization")).toBeNull();
+      expect([...request.headers.keys()]).toEqual(["accept"]);
+      return Response.json(workoutFixture);
+    });
+    const response = await worker.fetch(await request(), {
+      ...env,
+      WORKOUT_BUILDER: { fetch: direct },
+    });
+    expect(response.status).toBe(200);
+    expect(direct).toHaveBeenCalledTimes(1);
+    expect(upstream).not.toHaveBeenCalled();
+    expect(
+      (
+        await worker.fetch(await request("?date=2026-10-26", "GET", false), {
+          ...env,
+          WORKOUT_BUILDER: { fetch: direct },
+        })
+      ).status,
+    ).toBe(401);
+    expect(direct).toHaveBeenCalledTimes(1);
+  });
+  it("does not call routing 404s unpublished, or expose arbitrary upstream bodies", async () => {
+    const upstream = vi.spyOn(globalThis, "fetch");
+    for (const result of [
+      new Response("private edge error", { status: 404 }),
+      Response.json({ error: "Not found" }, { status: 404 }),
+      Response.json(
+        { error: "No published workout for this date", date: "2026-10-19" },
+        { status: 404 },
+      ),
+    ]) {
+      upstream.mockResolvedValueOnce(result);
+      const response = await worker.fetch(await request(), env);
+      expect(response.status).toBe(502);
+      expect(await response.json()).toEqual({
+        error: "workout_unavailable",
+        code: "WORKOUT-HTTP-404",
+        date: "2026-10-26",
+      });
+    }
+  });
   it("rejects unauthenticated, injected and invalid requests before contacting the builder", async () => {
     const upstream = vi.spyOn(globalThis, "fetch");
     for (const [query, method, auth, status] of [
@@ -88,7 +137,25 @@ describe("published workout feed", () => {
       [302, "workout_unavailable"],
     ] as const) {
       upstream.mockResolvedValueOnce(
-        new Response("private upstream body", { status }),
+        status === 404
+          ? Response.json(
+              {
+                error: "No published workout for this date",
+                date: "2026-10-26",
+                timeZone: "Pacific/Auckland",
+              },
+              { status },
+            )
+          : status === 409
+            ? Response.json(
+                {
+                  error:
+                    "Multiple published weeks cover this date. Choose a week.",
+                  date: "2026-10-26",
+                },
+                { status },
+              )
+            : new Response("private upstream body", { status }),
       );
       const response = await worker.fetch(await request(), env);
       expect((await response.json()).error).toBe(error);

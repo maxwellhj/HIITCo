@@ -7,6 +7,9 @@
     "enabled": true,
     "logs": { "enabled": true, "invocation_logs": false },
   },
+  "services": [
+    { "binding": "WORKOUT_BUILDER", "service": "hiit-co-workout-builder" },
+  ],
   "ratelimits": [
     {
       "name": "LOGIN_RATE_LIMITER",

@@ -35,16 +35,17 @@ export function WeeklyWorkouts({
         })
         .catch((error) => {
           if (controller.signal.aborted) return;
+          const dates = `${formatDate(date)} / ${formatDate(shiftDate(date, 3))}`;
           const message =
             error instanceof MemberApiError &&
             error.code === "workout_unpublished"
-              ? "This workout hasn’t been published yet."
+              ? `No published workout is available for ${dates}. Please ask your coach to publish and select the week beginning ${formatDate(week)} in the workout builder.`
               : error instanceof MemberApiError &&
                   error.code === "workout_overlap"
-                ? "Two published plans cover this date. Please ask your coach to check the schedule."
+                ? `More than one published workout covers ${dates}. Please ask your coach to choose “Show in member app” in the workout builder.`
                 : error instanceof MemberApiError && error.status === 401
                   ? "Please sign in again to view your workouts."
-                  : "We couldn’t load this workout. Please try again.";
+                  : `We couldn’t load the workout for ${dates}. Please try again. (${error instanceof MemberApiError && error.diagnostic ? error.diagnostic : "WORKOUT-CONNECTION"})`;
           setFeed((previous) => ({
             ...previous,
             [plan.id]: { error: message },
@@ -76,6 +77,12 @@ export function WeeklyWorkouts({
         <h2>This week’s workout</h2>
         <span className="pill">{published ? "CLUB PLAN" : "DEMO PLAN"}</span>
       </div>
+      {published && (
+        <p className="small muted workout-week-label">
+          Week beginning{" "}
+          {formatDate(week, { day: "numeric", month: "long", year: "numeric" })}
+        </p>
+      )}
       <div
         className="workout-slate"
         role="group"
