@@ -174,6 +174,37 @@ export async function memberTraining(
     } catch {
       return apiJson({ error: "invalid_training_log" }, 400);
     }
+    if (isChow) {
+      const existingResponse = await store.fetch(new Request(storageUrl));
+      if (!existingResponse.ok) throw Error();
+      const existing = (await existingResponse.json()) as {
+        revision: number;
+        sealed: string | null;
+      };
+      if (existing.revision !== revision)
+        return apiJson({ error: "training_conflict" }, 409);
+      const previous = existing.sealed
+        ? await parseChowLog(
+            await openTraining(
+              existing.sealed,
+              env.GYMMASTER_API_KEY!,
+              encryptionContext,
+            ),
+            dateKey(new Date()),
+          )
+        : emptyChowLog();
+      const candidate = log as import("../src/domain/chow").ChowLogData;
+      if (
+        candidate.scores.some(
+          (score) =>
+            score.unit !== "sets" &&
+            !previous.scores.some(
+              (old) => JSON.stringify(old) === JSON.stringify(score),
+            ),
+        )
+      )
+        return apiJson({ error: "sets_only" }, 400);
+    }
     const sealed = await sealTraining(
       log,
       env.GYMMASTER_API_KEY!,

@@ -1,6 +1,7 @@
 import { validDate } from "./training";
 import { weekKey, shiftDate } from "./attendance";
 export const chowUnits = [
+  "sets",
   "reps",
   "rounds",
   "calories",
@@ -16,6 +17,8 @@ export interface ChowChallenge {
   programWeek: number;
   station: number;
   workout: string;
+  blockScoped?: true;
+  blockStart?: string;
 }
 export interface ChowScore {
   id: string;
@@ -38,14 +41,23 @@ export const emptyChowLog = (): ChowLogData => ({
 export async function chowChallenge(
   value: Omit<ChowChallenge, "id">,
 ): Promise<ChowChallenge> {
+  if (value.blockScoped !== undefined && value.blockScoped !== true)
+    throw Error("Invalid CHOW scope");
   const normalized = {
     block: value.block.trim(),
     weekBeginning: value.weekBeginning,
     programWeek: value.programWeek,
     station: value.station,
     workout: value.workout.replace(/\r\n/g, "\n").trim(),
+    ...(value.blockScoped
+      ? { blockScoped: true as const, blockStart: value.blockStart }
+      : {}),
   };
   if (
+    (normalized.blockScoped &&
+      (!normalized.blockStart ||
+        !validDate(normalized.blockStart) ||
+        weekKey(normalized.blockStart) !== normalized.blockStart)) ||
     !normalized.block ||
     normalized.block.length > 100 ||
     !validDate(normalized.weekBeginning) ||
@@ -63,14 +75,24 @@ export async function chowChallenge(
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(
-      JSON.stringify([
-        "hiitco.chow.v1",
-        normalized.block,
-        normalized.weekBeginning,
-        normalized.programWeek,
-        normalized.station,
-        normalized.workout,
-      ]),
+      JSON.stringify(
+        normalized.blockScoped
+          ? [
+              "hiitco.chow.block.v1",
+              normalized.block,
+              normalized.blockStart,
+              normalized.station,
+              normalized.workout,
+            ]
+          : [
+              "hiitco.chow.v1",
+              normalized.block,
+              normalized.weekBeginning,
+              normalized.programWeek,
+              normalized.station,
+              normalized.workout,
+            ],
+      ),
     ),
   );
   return {
@@ -123,8 +145,8 @@ export async function parseChowLog(
       typeof s.date !== "string" ||
       !validDate(s.date) ||
       s.date > today ||
-      s.date < c.weekBeginning ||
-      s.date > shiftDate(c.weekBeginning, 6) ||
+      s.date < (c.blockScoped ? c.blockStart! : c.weekBeginning) ||
+      (!c.blockScoped && s.date > shiftDate(c.weekBeginning, 6)) ||
       !Number.isFinite(s.score) ||
       s.score < 0 ||
       s.score > 1000000 ||

@@ -10,6 +10,8 @@ export interface PublishedWorkout {
   weekBeginning: string;
   day: string;
   publishedAt: string;
+  blockBeginning?: string;
+  blockChows?: { station: number; workout: string | null }[];
   stations: { station: number; workout: string; chow: boolean }[];
 }
 export function parsePublishedWorkout(
@@ -31,6 +33,19 @@ export function parsePublishedWorkout(
     ![w.block, w.category, w.day].every(
       (v) => typeof v === "string" && v.trim().length > 0 && v.length <= 100,
     ) ||
+    (w.blockBeginning !== undefined &&
+      (!validDate(w.blockBeginning) ||
+        weekKey(w.blockBeginning) !== w.blockBeginning)) ||
+    (w.blockChows !== undefined &&
+      (!Array.isArray(w.blockChows) ||
+        w.blockChows.length !== 9 ||
+        w.blockChows.some(
+          (c, i) =>
+            !c ||
+            c.station !== i + 1 ||
+            (c.workout !== null &&
+              (typeof c.workout !== "string" || c.workout.length > 6000)),
+        ))) ||
     !Array.isArray(w.stations) ||
     w.stations.length !== 9 ||
     w.stations.some(
@@ -52,6 +67,15 @@ export function parsePublishedWorkout(
     weekBeginning: w.weekBeginning,
     day: w.day,
     publishedAt: w.publishedAt,
+    ...(w.blockBeginning ? { blockBeginning: w.blockBeginning } : {}),
+    ...(w.blockChows
+      ? {
+          blockChows: w.blockChows.map((c) => ({
+            station: c.station,
+            workout: c.workout,
+          })),
+        }
+      : {}),
     stations: w.stations.map((s) => ({
       station: s.station,
       workout: s.workout,

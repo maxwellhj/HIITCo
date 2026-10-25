@@ -47,6 +47,45 @@ describe("CHOW attempts", () => {
     ])
       expect((await chowChallenge(changed)).id).not.toBe(challenge.id);
   });
+  it("shares a block-scoped challenge across weeks and allows later attempts", async () => {
+    const first = await chowChallenge({
+      ...seed,
+      blockScoped: true,
+      blockStart: "2026-10-26",
+    });
+    const later = await chowChallenge({
+      ...seed,
+      weekBeginning: "2026-11-02",
+      programWeek: 2,
+      blockScoped: true,
+      blockStart: "2026-10-26",
+    });
+    expect(later.id).toBe(first.id);
+    const log = {
+      version: 1 as const,
+      challenges: [first],
+      scores: [
+        {
+          id: "s-block",
+          challengeId: first.id,
+          date: "2026-11-02",
+          score: 8,
+          unit: "sets" as const,
+          createdAt: "2026-11-02T00:00:00Z",
+        },
+      ],
+    };
+    expect((await parseChowLog(log, "2026-11-02")).scores[0].score).toBe(8);
+    expect(
+      (
+        await chowChallenge({
+          ...seed,
+          blockScoped: true,
+          blockStart: "2026-12-07",
+        })
+      ).id,
+    ).not.toBe(first.id);
+  });
   it("validates round trips without changing historical instructions", async () => {
     const log = await sample();
     expect(await parseChowLog(log, "2026-10-26")).toEqual(log);

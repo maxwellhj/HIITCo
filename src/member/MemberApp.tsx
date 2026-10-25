@@ -1,3 +1,4 @@
+import { MemberProgress } from "./MemberProgress";
 import { MemberChow } from "./ChowScores";
 import { MemberTraining } from "./MemberTraining";
 import { useEffect, useRef, useState } from "react";
@@ -386,7 +387,7 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
               )}
             </div>
           </div>
-          {page === "home" || page === "progress" ? (
+          {page === "home" ? (
             <MemberDashboard
               profile={profile}
               showStats={showHomeStats}
@@ -397,8 +398,9 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
               attendanceError={attendanceError}
               refresh={() => void load()}
               busy={false}
-              progress={page === "progress"}
             />
+          ) : page === "progress" ? (
+            <MemberProgress />
           ) : page === "account" ? (
             <Card>
               <h2>

@@ -1,4 +1,4 @@
-import { ChowDialog, type ChowSeed } from "../member/ChowScores";
+import { ChowDialog } from "../member/ChowScores";
 import { useEffect, useId, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { Card } from "./UI";
@@ -22,7 +22,10 @@ export function WeeklyWorkouts({
     Record<string, { workout?: PublishedWorkout; error?: string }>
   >({});
   const [retry, setRetry] = useState(0);
-  const [activeChow, setActiveChow] = useState<ChowSeed | null>(null);
+  const [activeChow, setActiveChow] = useState<{
+    source: PublishedWorkout;
+    station: number;
+  } | null>(null);
   useEffect(() => {
     if (!published) return;
     const controller = new AbortController();
@@ -144,11 +147,8 @@ export function WeeklyWorkouts({
               published && entry?.workout
                 ? (station) =>
                     setActiveChow({
-                      block: entry.workout!.block,
-                      weekBeginning: entry.workout!.weekBeginning,
-                      programWeek: entry.workout!.programWeek,
+                      source: entry.workout!,
                       station: station.number,
-                      workout: station.workoutText ?? "",
                     })
                 : undefined
             }
@@ -163,7 +163,8 @@ export function WeeklyWorkouts({
       )}
       {activeChow && (
         <ChowDialog
-          challenge={activeChow}
+          source={activeChow.source}
+          station={activeChow.station}
           onClose={() => setActiveChow(null)}
         />
       )}

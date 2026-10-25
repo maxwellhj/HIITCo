@@ -46,7 +46,7 @@ export async function memberWorkouts(
     stage = `WORKOUT-HTTP-${response.status}`;
     if (!response.headers.get("Content-Type")?.includes("application/json"))
       throw Error();
-    const value: unknown = JSON.parse(await limitedText(response.body, 100000));
+    const value: unknown = JSON.parse(await limitedText(response.body, 150000));
     const error =
       value && typeof value === "object"
         ? (value as Record<string, unknown>)

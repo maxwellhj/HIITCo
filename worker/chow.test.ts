@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import worker, { type Env } from "./index";
 import { sealSession, sessionCookie } from "./gymmaster/session";
 import { chowChallenge, emptyChowLog } from "../src/domain/chow";
+import { sealTraining, trainingMemberKey } from "./training";
 import { dateKey, weekKey } from "../src/domain/attendance";
 import { emptyTrainingLog } from "../src/domain/training";
 const secret = "fake-chow-api-key";
@@ -77,7 +78,7 @@ async function sample() {
         challengeId: c.id,
         date: today,
         score: 120,
-        unit: "reps" as const,
+        unit: "sets" as const,
         createdAt: new Date().toISOString(),
       },
     ],
@@ -137,6 +138,42 @@ describe("private CHOW account storage", () => {
     expect(
       (await (await worker.fetch(await request(), env)).json()).log,
     ).toEqual(log);
+  });
+  it("allows only sets for new scores while retaining unchanged legacy records", async () => {
+    const { env, records } = environment();
+    const legacy = await sample();
+    (legacy.scores[0] as { unit: string }).unit = "reps";
+    const key = await trainingMemberKey(42, secret);
+    records.set(key + "/chow", {
+      revision: 1,
+      sealed: await sealTraining(legacy, secret, key + ":chow-v1"),
+    });
+    const next = structuredClone(legacy);
+    next.scores.push({
+      ...next.scores[0],
+      id: "new-sets",
+      score: 8,
+      unit: "sets",
+    });
+    expect(
+      (await worker.fetch(await request(42, { log: next, revision: 1 }), env))
+        .status,
+    ).toBe(200);
+    const invalid = structuredClone(next);
+    (invalid.scores[1] as { unit: string }).unit = "calories";
+    expect(
+      (
+        await worker.fetch(
+          await request(42, { log: invalid, revision: 2 }),
+          env,
+        )
+      ).status,
+    ).toBe(400);
+    const saved = await (await worker.fetch(await request(), env)).json();
+    expect(saved.log.scores.map((s: { unit: string }) => s.unit)).toEqual([
+      "reps",
+      "sets",
+    ]);
   });
   it("enforces session identity, origin checks, query restrictions and rate limits", async () => {
     const { env } = environment();

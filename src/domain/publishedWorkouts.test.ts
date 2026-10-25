@@ -43,6 +43,25 @@ describe("builder workout adapter", () => {
       ),
     ).toEqual(["trap-bar-deadlift", "db-bench-press"]);
   });
+  it("validates and preserves the nine block CHOW definitions", () => {
+    const value = {
+      ...fixture,
+      blockBeginning: "2026-10-26",
+      blockChows: Array.from({ length: 9 }, (_, i) => ({
+        station: i + 1,
+        workout: `CHOW ${i + 1}`,
+      })),
+    };
+    expect(parsePublishedWorkout(value, value.date).blockChows).toEqual(
+      value.blockChows,
+    );
+    expect(() =>
+      parsePublishedWorkout(
+        { ...value, blockChows: value.blockChows.slice(0, 8) },
+        value.date,
+      ),
+    ).toThrow();
+  });
   it("rejects malformed or wrongly dated feeds", () => {
     for (const value of [
       null,
