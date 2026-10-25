@@ -3082,3 +3082,5 @@ td > svg {
 @media(max-width:500px){.member-progress .card { padding: 18px 14px; }.progress-sections button{font-size:12px;}.sticker-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
 
 .chow-entry-row input { background: #f8f9fa; border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+
+.chow-instructions h3 { margin: 12px 0 6px; font-size: 12px; font-weight: 600; color: var(--muted); }

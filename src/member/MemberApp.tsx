@@ -442,16 +442,13 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
               route={logRoute}
             />
           )}
-          <p className="member-source small muted">
-            Your name and total visits come from GymMaster.{" "}
-            {page === "home" || page === "events" || page === "messages"
-              ? "Workouts come from the club’s published plan. Events and messages are still demo content."
-              : ""}
-          </p>
+          {(page === "home" || page === "events" || page === "messages") && (
+            <p className="member-source small muted">
+              Workouts come from the club’s published plan. Events and messages
+              are still demo content.
+            </p>
+          )}
         </main>
-        <footer className="page-footer">
-          <span>BUILT FOR YOUR EVERYDAY STRONGER.</span>
-        </footer>
       </div>
       <nav className="bottom-nav" aria-label="Mobile navigation">
         {navigation.map(({ id, label, icon: Icon }) => (

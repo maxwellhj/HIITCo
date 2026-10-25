@@ -385,7 +385,6 @@ function App() {
           )}
         </main>
         <footer className="page-footer">
-          <span>BUILT FOR YOUR EVERYDAY STRONGER.</span>
           <button onClick={() => setShowInstall(true)}>
             <ArrowDownToLine size={15} /> Add to your home screen
           </button>

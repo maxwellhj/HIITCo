@@ -243,10 +243,10 @@ export function ChowScores({
       {feedError && <p className="small muted">{feedError}</p>}
       {selected ? (
         <>
-          <details className="chow-instructions">
-            <summary>Challenge details</summary>
+          <div className="chow-instructions">
+            <h3>Challenge details</h3>
             <p className="chow-workout">{selected.workout}</p>
-          </details>
+          </div>
           <div className="chow-quick-stats">
             <span>
               Last<strong>{last ? `${number(last.score)} sets` : "—"}</strong>
