@@ -26,9 +26,9 @@ function CalendarLinks({ event }: { event: ClubEvent }) {
   ]);
   return (
     <div className="event-calendar-links">
-      <p className="small muted">Save this event to your calendar:</p>
+      <h4>Add to your calendar</h4>
       <a
-        className="secondary"
+        className="primary"
         href={googleCalendarUrl(event)}
         target="_blank"
         rel="noopener noreferrer"
@@ -99,7 +99,7 @@ export function EventResponse({
             ? "Your response: " + eventResponseLabels[value]
             : "Choose your response. You can change it later."}
       </p>
-      {value === "going" && <CalendarLinks event={event} />}{" "}
+      <CalendarLinks event={event} />{" "}
       {!!event.bookingUrl && (
         <p className="small muted">
           If you’re going, use the booking link to reserve your place.

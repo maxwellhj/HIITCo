@@ -3225,3 +3225,4 @@ td > svg {
 .app-update-notice p {font-size:12px;margin:8px 0 12px;}
 .app-update-notice > div {display:flex;align-items:center;gap:16px;}
 @media(max-width:760px){.app-update-notice{left:14px;right:14px;bottom:calc(96px + env(safe-area-inset-bottom,0px));max-width:none;}}
+.event-calendar-links h4 {flex-basis:100%;margin:0 0 2px;}
