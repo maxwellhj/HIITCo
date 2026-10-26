@@ -30,6 +30,7 @@ export class ControlStore {
       "CREATE TABLE IF NOT EXISTS activity_read (id TEXT PRIMARY KEY)",
       "CREATE TABLE IF NOT EXISTS skill_posters (id TEXT PRIMARY KEY,version TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY,sealed TEXT NOT NULL,published INTEGER NOT NULL DEFAULT 0)",
+      "CREATE TABLE IF NOT EXISTS club_events (id TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS settings (id TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
     ])
       state.storage.sql.exec(sql);
@@ -39,6 +40,18 @@ export class ControlStore {
       sql = this.state.storage.sql;
     try {
       if (request.method === "GET") {
+        if (url.pathname === "/club")
+          return apiJson({
+            rows: sql
+              .exec("SELECT id,sealed FROM club_events LIMIT 500")
+              .toArray(),
+            target:
+              sql
+                .exec<{ sealed: string }>(
+                  "SELECT sealed FROM settings WHERE id='club-target'",
+                )
+                .toArray()[0]?.sealed ?? null,
+          });
         if (url.pathname === "/skills")
           return apiJson({
             rows: sql
@@ -130,6 +143,44 @@ export class ControlStore {
       if (request.method !== "POST")
         return apiJson({ error: "method_not_allowed" }, 405);
       const body = JSON.parse(await limitedText(request.body, 1100000));
+      if (url.pathname === "/club-target") {
+        if (typeof body.sealed !== "string" || body.sealed.length > 2000)
+          throw Error();
+        sql.exec(
+          "INSERT INTO settings(id,sealed) VALUES('club-target',?) ON CONFLICT(id) DO UPDATE SET sealed=excluded.sealed",
+          body.sealed,
+        );
+        return apiJson({ saved: true });
+      }
+      if (
+        url.pathname === "/club-event" ||
+        url.pathname === "/club-event-remove"
+      ) {
+        if (!stickerId(body.id)) throw Error();
+        if (url.pathname === "/club-event-remove")
+          sql.exec("DELETE FROM club_events WHERE id=?", body.id);
+        else {
+          if (typeof body.sealed !== "string" || body.sealed.length > 32000)
+            throw Error();
+          if (
+            !sql
+              .exec("SELECT id FROM club_events WHERE id=?", body.id)
+              .toArray().length &&
+            sql
+              .exec<{ count: number }>(
+                "SELECT count(*) AS count FROM club_events",
+              )
+              .one().count >= 500
+          )
+            return apiJson({ error: "calendar_full" }, 409);
+          sql.exec(
+            "INSERT INTO club_events(id,sealed) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET sealed=excluded.sealed",
+            body.id,
+            body.sealed,
+          );
+        }
+        return apiJson({ saved: true });
+      }
       if (url.pathname === "/skill-poster") {
         if (
           !stickerId(body.id) ||

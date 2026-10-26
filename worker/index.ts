@@ -1,3 +1,4 @@
+import { clubApi } from "./control/club";
 import { skillsApi, type SkillsEnv } from "./control/skillVideos";
 export { SkillVideoStore } from "./control/videoStore";
 import { controlApi, memberTrophies } from "./control/api";
@@ -42,6 +43,8 @@ export default {
       // Public liveness only. Never reveal secret values or credential status.
       return json({ status: "ok" });
     }
+    const clubResponse = await clubApi(request, env);
+    if (clubResponse) return clubResponse;
     const skillsResponse = await skillsApi(request, env);
     if (skillsResponse) return skillsResponse;
     const controlResponse = await controlApi(request, env);

@@ -8,6 +8,7 @@ export interface ClubEvent {
   location: string;
   description: string;
   bring: string;
+  bookingUrl?: string;
 }
 
 export function monthStart(date: string) {

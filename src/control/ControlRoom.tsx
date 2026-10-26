@@ -1,7 +1,9 @@
+import { ClubManager } from "./ClubManager";
 import { SkillsManager } from "./SkillsManager";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
+  CalendarDays,
   Film,
   Check,
   ChevronRight,
@@ -36,7 +38,7 @@ type Detail = {
 };
 export default function ControlRoom() {
   const [tab, setTab] = useState<
-      "members" | "stickers" | "activity" | "reports" | "skills"
+      "members" | "stickers" | "activity" | "reports" | "skills" | "club"
     >("members"),
     [members, setMembers] = useState<AppMember[]>([]),
     [stickers, setStickers] = useState<ClubSticker[]>([]),
@@ -188,7 +190,7 @@ export default function ControlRoom() {
             </span>
           </Card>
         </div>
-        {access && !access.available && tab !== "skills" && (
+        {access && !access.available && !["skills", "club"].includes(tab) && (
           <Card className="control-access-notice">
             <h2>Allow your staff connection to get started</h2>
             <p>
@@ -215,6 +217,7 @@ export default function ControlRoom() {
               { id: "members", label: "Members", icon: Users },
               { id: "stickers", label: "Stickers", icon: Trophy },
               { id: "skills", label: "Skills Library", icon: Film },
+              { id: "club", label: "Club settings", icon: CalendarDays },
               { id: "activity", label: "Activity", icon: Bell },
               { id: "reports", label: "GymMaster reports", icon: Download },
             ] as const
@@ -323,6 +326,8 @@ export default function ControlRoom() {
             available={!!access?.skillsAvailable}
             onAccessError={handle}
           />
+        ) : tab === "club" ? (
+          <ClubManager />
         ) : tab === "activity" ? (
           <Card>
             <div className="section-top">

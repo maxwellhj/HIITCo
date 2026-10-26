@@ -4,7 +4,8 @@ import { Card } from "../components/UI";
 import { Bullseye } from "../components/Bullseye";
 import { BoxingGlove } from "../components/BoxingGlove";
 import { WeeklyWorkouts } from "../components/WeeklyWorkouts";
-import { clubEvents, eventsAreDemo } from "../data/events";
+import { useClubContent } from "./useClubContent";
+import { trainingDays, eventTimeLabel } from "../domain/club";
 import { upcomingEvents } from "../domain/events";
 import { dateKey, formatDate, weekKey } from "../domain/attendance";
 import type { DailyVisits } from "../domain/gymmasterVisits";
@@ -34,6 +35,9 @@ export function MemberDashboard({
   progress?: boolean;
   showStats?: boolean;
 }) {
+  const { data: club, error: clubError } = useClubContent();
+  const today = dateKey(new Date());
+  const trained = trainingDays(days, checkins, today);
   const [week, setWeek] = useState(0),
     [selected, setSelected] = useState<{
       date: string;
@@ -46,7 +50,7 @@ export function MemberDashboard({
           : null
         : memberAttendance(days),
     current = stats?.weeks[0];
-  const target = 3,
+  const target = club?.weeklyTarget ?? null,
     total = profile.totalVisits,
     next =
       total === null
@@ -58,16 +62,15 @@ export function MemberDashboard({
   const count = !current
     ? "—"
     : current.complete
-      ? String(current.total)
-      : current.total > 0
-        ? `${current.total}+`
+      ? String(trained)
+      : trained > 0
+        ? `${trained}+`
         : "—";
   const streakCount = streakSummary ? streakSummary.count : stats?.streak;
   const streakExact = streakSummary ? streakSummary.exact : stats?.streakExact;
   const streak =
     streakCount == null ? "—" : `${streakCount}${streakExact ? "" : "+"}`;
-  const today = dateKey(new Date());
-  const event = upcomingEvents(clubEvents, today)[0];
+  const event = upcomingEvents(club?.events ?? [], today)[0];
   const selectedCheckins = selected
     ? (checkins?.filter((record) => record.date === selected.date) ?? [])
     : [];
@@ -84,30 +87,32 @@ export function MemberDashboard({
               <div
                 className="progress-ring"
                 style={{
-                  background: `conic-gradient(var(--blue) ${Math.min(100, ((current?.total ?? 0) / target) * 100)}%, var(--ring-track) 0)`,
+                  background: `conic-gradient(var(--blue) ${Math.min(100, (target ? trained / target : 0) * 100)}%, var(--ring-track) 0)`,
                 }}
                 role="img"
                 aria-label={
-                  count === "—"
+                  count === "—" || target === null
                     ? "Weekly attendance unavailable"
-                    : `${count} visits recorded, suggested goal ${target}`
+                    : `${count} training days recorded, weekly target ${target ?? "unavailable"}`
                 }
               >
                 <div>
                   <strong>
                     {count}
-                    <span>/{target}</span>
+                    {target !== null && <span>/{target}</span>}
                   </strong>
                 </div>
               </div>
               <p>
-                {!current
-                  ? "Attendance unavailable"
-                  : current.total >= target
-                    ? "Goal reached!"
-                    : current.complete
-                      ? `${target - current.total} to go this week`
-                      : "Waiting for complete data"}
+                {target === null
+                  ? "Weekly target unavailable"
+                  : !current
+                    ? "Attendance unavailable"
+                    : trained >= target
+                      ? "Goal reached!"
+                      : current.complete
+                        ? `${target - trained} training days to go this week`
+                        : "Waiting for complete data"}
               </p>
             </Card>
             <Card className="home-stat">
@@ -144,8 +149,8 @@ export function MemberDashboard({
             </Card>
           </div>
           <p className="small muted">
-            Suggested goal: 3 visits a week. Streaks count consecutive attended
-            weeks. “+” means at least this many.
+            Weekly target: {target ?? "—"} training days. Streaks count
+            consecutive attended weeks. “+” means at least this many.
           </p>
         </div>
       )}
@@ -311,14 +316,20 @@ export function MemberDashboard({
                 <span>
                   <strong>{event.title}</strong>
                   <small>
-                    {formatDate(event.date)} · {event.time}
-                    {eventsAreDemo ? " · Demo event" : ""}
+                    {formatDate(event.date)}
+                    {event.time ? ` · ${eventTimeLabel(event.time)}` : ""}
                   </small>
                 </span>
                 <ArrowRight size={17} />
               </a>
             ) : (
-              <p>No upcoming events just yet.</p>
+              <p>
+                {clubError
+                  ? "Club events are temporarily unavailable."
+                  : !club
+                    ? "Loading club events…"
+                    : "No upcoming events just yet."}
+              </p>
             )}
             <a className="text-button" href="#events">
               View calendar <ArrowRight size={15} />

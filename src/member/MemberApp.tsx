@@ -444,8 +444,8 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
           )}
           {(page === "home" || page === "events" || page === "messages") && (
             <p className="member-source small muted">
-              Workouts come from the club’s published plan. Events and messages
-              are still demo content.
+              Workouts and events come from the club. Messages are still demo
+              content.
             </p>
           )}
         </main>

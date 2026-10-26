@@ -1,4 +1,6 @@
-import { useRef, useState } from "react";
+import { useClubContent } from "../member/useClubContent";
+import { eventTimeLabel } from "../domain/club";
+import { useEffect, useRef, useState } from "react";
 import {
   CalendarDays,
   ChevronLeft,
@@ -8,7 +10,7 @@ import {
   Backpack,
 } from "lucide-react";
 import { Card } from "../components/UI";
-import { clubEvents, eventsAreDemo } from "../data/events";
+import { clubEvents as demoEvents } from "../data/events";
 import { dateKey, formatDate } from "../domain/attendance";
 import {
   calendarDays,
@@ -17,11 +19,22 @@ import {
   upcomingEvents,
 } from "../domain/events";
 
-export function Events() {
+export function Events({ demo = false }: { demo?: boolean }) {
+  const { data, error, reload } = useClubContent(!demo);
+  const clubEvents = demo ? demoEvents : (data?.events ?? []);
+  const initialized = useRef(false);
   const today = dateKey(new Date());
   const upcoming = upcomingEvents(clubEvents, today);
   const [selected, setSelected] = useState(upcoming[0]?.date ?? today);
   const [month, setMonth] = useState(monthStart(upcoming[0]?.date ?? today));
+  useEffect(() => {
+    if (data && !initialized.current) {
+      initialized.current = true;
+      const first = upcomingEvents(data.events, today)[0]?.date ?? today;
+      setSelected(first);
+      setMonth(monthStart(first));
+    }
+  }, [data, today]);
   const detailsRef = useRef<HTMLElement>(null);
   const selectedEvents = clubEvents.filter((event) => event.date === selected);
   function selectDate(date: string) {
@@ -33,9 +46,27 @@ export function Events() {
     setMonth(next);
     setSelected(monthStart(today) === next ? today : next);
   }
+  if (!demo && !data)
+    return (
+      <Card>
+        <p role={error ? "alert" : "status"}>
+          {error || "Loading club events…"}
+        </p>
+        {error && (
+          <button className="secondary" onClick={reload}>
+            Try again
+          </button>
+        )}
+      </Card>
+    );
   return (
     <div className="events-space">
-      {eventsAreDemo && (
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      {demo && (
         <p className="events-demo">
           <span className="pill">DEMO EVENTS</span> Sample events to try the
           calendar. These are not scheduled club events.
@@ -131,19 +162,34 @@ export function Events() {
                 <div className="event-facts">
                   <p>
                     <Clock size={16} />
-                    {event.time} <span className="muted">NZ time</span>
+                    {eventTimeLabel(event.time)}{" "}
+                    {event.time && <span className="muted">NZ time</span>}
                   </p>
-                  <p>
-                    <MapPin size={16} />
-                    {event.location}
-                  </p>
+                  {event.location && (
+                    <p>
+                      <MapPin size={16} />
+                      {event.location}
+                    </p>
+                  )}
                 </div>
                 <h4>About this event</h4>
-                <p>{event.description}</p>
-                <div className="event-bring">
-                  <Backpack size={18} />
-                  <p>{event.bring}</p>
-                </div>
+                <p className="club-event-description">{event.description}</p>
+                {event.bring && (
+                  <div className="event-bring">
+                    <Backpack size={18} />
+                    <p>{event.bring}</p>
+                  </div>
+                )}
+                {event.bookingUrl && (
+                  <a
+                    className="primary event-booking-link"
+                    href={event.bookingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Book this event
+                  </a>
+                )}
               </Card>
             ))
           ) : (
@@ -187,7 +233,7 @@ export function Events() {
                 </span>
                 <span className="event-list-copy">
                   <strong>{event.title}</strong>
-                  <span>{event.time}</span>
+                  <span>{eventTimeLabel(event.time)}</span>
                 </span>
                 <ChevronRight size={18} />
               </button>

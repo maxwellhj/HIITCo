@@ -345,7 +345,7 @@ function App() {
               ) : page === "skills" ? (
                 <Skills demo />
               ) : page === "events" ? (
-                <Events />
+                <Events demo />
               ) : page === "log" ? (
                 <TrainingLog
                   key={`${member.id}:${logExerciseId ?? "list"}`}
