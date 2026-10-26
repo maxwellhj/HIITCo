@@ -1,3 +1,5 @@
+import { skillsApi, type SkillsEnv } from "./control/skillVideos";
+export { SkillVideoStore } from "./control/videoStore";
 import { controlApi, memberTrophies } from "./control/api";
 import type { ControlEnv } from "./control/access";
 export { ControlStore } from "./control/store";
@@ -11,7 +13,7 @@ export { MemberTrainingStore } from "./training";
 import { memberWorkouts, type WorkoutEnv } from "./workouts";
 export { GymMasterCheckinInbox } from "./gymmaster/webhookInbox";
 export interface Env
-  extends AuthEnv, WebhookEnv, TrainingEnv, WorkoutEnv, ControlEnv {
+  extends AuthEnv, WebhookEnv, TrainingEnv, WorkoutEnv, ControlEnv, SkillsEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
 }
 
@@ -40,6 +42,8 @@ export default {
       // Public liveness only. Never reveal secret values or credential status.
       return json({ status: "ok" });
     }
+    const skillsResponse = await skillsApi(request, env);
+    if (skillsResponse) return skillsResponse;
     const controlResponse = await controlApi(request, env);
     if (controlResponse) return controlResponse;
     const trophyResponse = await memberTrophies(request, env);

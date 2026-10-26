@@ -1,6 +1,8 @@
+import { SkillsManager } from "./SkillsManager";
 import { useEffect, useRef, useState } from "react";
 import {
   Bell,
+  Film,
   Check,
   ChevronRight,
   Download,
@@ -34,7 +36,7 @@ type Detail = {
 };
 export default function ControlRoom() {
   const [tab, setTab] = useState<
-      "members" | "stickers" | "activity" | "reports"
+      "members" | "stickers" | "activity" | "reports" | "skills"
     >("members"),
     [members, setMembers] = useState<AppMember[]>([]),
     [stickers, setStickers] = useState<ClubSticker[]>([]),
@@ -178,15 +180,17 @@ export default function ControlRoom() {
         </div>
         {access && !access.available && (
           <Card className="control-access-notice">
-            <h2>One page. No staff accounts.</h2>
+            <h2>Allow your staff connection to get started</h2>
             <p>
               {access.configured
-                ? "Open this page from an allowed club connection to manage live member records."
-                : "The Control Room is ready for access setup. Live member records and controls will become available once an allowed club connection is configured."}
+                ? "This internet connection hasn’t been allowed. Open the Control Room from your configured staff connection."
+                : "There’s no staff login. Instead, the Control Room checks your internet connection’s public IP address before showing member records or allowing changes."}
             </p>
             <p className="small muted">
-              Member information stays hidden from connections that have not
-              been allowed.
+              In Cloudflare → hiitco → Settings → Variables and Secrets, add a
+              Text variable named CONTROL_ROOM_ALLOWED_IPS with your staff
+              connection’s public IP address, then deploy. Anyone sharing that
+              address can access these controls, so use a staff-only connection.
             </p>
           </Card>
         )}
@@ -200,6 +204,7 @@ export default function ControlRoom() {
             [
               { id: "members", label: "Members", icon: Users },
               { id: "stickers", label: "Stickers", icon: Trophy },
+              { id: "skills", label: "Skills Library", icon: Film },
               { id: "activity", label: "Activity", icon: Bell },
               { id: "reports", label: "GymMaster reports", icon: Download },
             ] as const
@@ -302,6 +307,11 @@ export default function ControlRoom() {
             available={!!access?.available}
             onChanged={() => void load()}
             onError={handle}
+          />
+        ) : tab === "skills" ? (
+          <SkillsManager
+            available={!!access?.available}
+            onAccessError={handle}
           />
         ) : tab === "activity" ? (
           <Card>

@@ -10,7 +10,8 @@
     "test": "vitest run",
     "dev:worker": "wrangler dev --local",
     "deploy:check": "wrangler deploy --dry-run",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test:skills": "node scripts/check-skills.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

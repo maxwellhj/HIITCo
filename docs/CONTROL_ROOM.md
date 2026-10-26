@@ -32,3 +32,13 @@ Profile directory entries, sticker metadata/artwork, report credentials, activit
 Training and CHOW saves retain their revision checks. Their PB snapshot is queued atomically with the log, retried after failure, and centrally guarded against older revisions. Repeated award requests do not create duplicate activity. Member trophy and artwork requests use the member's authenticated session identity rather than a client-supplied member ID.
 
 Tests cover network denial, encrypted directory/report storage, artwork validation, cross-member isolation, award idempotence, PB corrections and retries, report response filtering, and persistence across Worker restarts. Production GymMaster credentials and live member data are not used in these checks.
+
+## Skills Library
+
+Open the **Skills Library** tab in the Control Room. Enter a title, choose Box, Lift or Sweat, add optional coaching notes and upload an MP4 or WebM file up to 50 MB. For reliable phone playback export MP4 with H.264 video and AAC audio; this release does not transcode phone camera originals or accept MOV files.
+
+Uploads are saved as drafts. Preview the video, then select **Publish video** to show it through the member app's Skills Library button. **Unpublish** hides it from members without deleting the file. **Remove** asks for confirmation and removes the catalogue entry and file. Members must have a valid app session to list or stream videos; direct URLs do not bypass draft or network checks. The member library refreshes on return and every 30 seconds while visible.
+
+`SKILL_VIDEOS` is a new SQLite Durable Object binding with one object per video, added by the `skills-library-v1` migration. Video bytes are stored in 1 MB chunks and streamed with byte-range and HEAD support for seeking. No external video host, R2 bucket or extra secret is required for this initial short-video library. Files are private through the API; they use Cloudflare storage encryption rather than the member-log encryption key. Catalogue titles and notes are encrypted with the existing app key. The initial library limit is 200 videos; use dedicated media storage/transcoding if this grows into a large video collection. Incomplete uploads are cleaned after a day, and failed catalogue registration removes the uploaded file.
+
+Run `npm run test:skills` for the real Worker/SQLite integration check. It uses synthetic video-container bytes and fake member credentials to check publication, authentication, upload validation, range responses and persistence. Browser playback is additionally checked with a locally generated H.264 MP4, never with member data.

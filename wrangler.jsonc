@@ -25,6 +25,7 @@
   ],
   "durable_objects": {
     "bindings": [
+      { "name": "SKILL_VIDEOS", "class_name": "SkillVideoStore" },
       { "name": "CONTROL_STORE", "class_name": "ControlStore" },
       { "name": "MEMBER_TRAINING_LOGS", "class_name": "MemberTrainingStore" },
       {
@@ -43,6 +44,7 @@
       "new_sqlite_classes": ["MemberTrainingStore"],
     },
     { "tag": "control-room-v1", "new_sqlite_classes": ["ControlStore"] },
+    { "tag": "skills-library-v1", "new_sqlite_classes": ["SkillVideoStore"] },
   ],
   "assets": {
     "directory": "./dist",

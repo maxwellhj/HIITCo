@@ -343,7 +343,7 @@ function App() {
               ) : page === "progress" ? (
                 <Progress member={member} data={data} />
               ) : page === "skills" ? (
-                <Skills />
+                <Skills demo />
               ) : page === "events" ? (
                 <Events />
               ) : page === "log" ? (

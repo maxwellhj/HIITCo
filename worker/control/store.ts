@@ -28,6 +28,7 @@ export class ControlStore {
       "CREATE TABLE IF NOT EXISTS snapshots (member_key TEXT NOT NULL,kind TEXT NOT NULL,revision INTEGER NOT NULL,sealed TEXT NOT NULL,PRIMARY KEY(member_key,kind))",
       "CREATE TABLE IF NOT EXISTS audit (id TEXT PRIMARY KEY,member_key TEXT NOT NULL,sealed TEXT NOT NULL,created_at TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS activity_read (id TEXT PRIMARY KEY)",
+      "CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY,sealed TEXT NOT NULL,published INTEGER NOT NULL DEFAULT 0)",
       "CREATE TABLE IF NOT EXISTS settings (id TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
     ])
       state.storage.sql.exec(sql);
@@ -37,6 +38,14 @@ export class ControlStore {
       sql = this.state.storage.sql;
     try {
       if (request.method === "GET") {
+        if (url.pathname === "/skills")
+          return apiJson({
+            rows: sql
+              .exec(
+                "SELECT id,sealed,published FROM skills ORDER BY rowid DESC LIMIT 200",
+              )
+              .toArray(),
+          });
         if (url.pathname === "/setting") {
           if (url.searchParams.get("id") !== "reports-key") throw Error();
           return apiJson({
@@ -120,6 +129,34 @@ export class ControlStore {
       if (request.method !== "POST")
         return apiJson({ error: "method_not_allowed" }, 405);
       const body = JSON.parse(await limitedText(request.body, 1100000));
+      if (
+        ["/skill", "/skill-publish", "/skill-remove"].includes(url.pathname)
+      ) {
+        if (!stickerId(body.id)) throw Error();
+        if (url.pathname === "/skill") {
+          if (typeof body.sealed !== "string" || body.sealed.length > 8000)
+            throw Error();
+          if (
+            sql
+              .exec<{ count: number }>("SELECT count(*) AS count FROM skills")
+              .one().count >= 200
+          )
+            return apiJson({ error: "library_full" }, 409);
+          sql.exec(
+            "INSERT INTO skills(id,sealed,published) VALUES(?,?,0)",
+            body.id,
+            body.sealed,
+          );
+        } else if (url.pathname === "/skill-publish") {
+          if (typeof body.published !== "boolean") throw Error();
+          sql.exec(
+            "UPDATE skills SET published=? WHERE id=?",
+            body.published ? 1 : 0,
+            body.id,
+          );
+        } else sql.exec("DELETE FROM skills WHERE id=?", body.id);
+        return apiJson({ saved: true });
+      }
       if (url.pathname === "/setting") {
         if (
           body.id !== "reports-key" ||

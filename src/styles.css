@@ -3146,3 +3146,18 @@ td > svg {
 .control-activity-row small { display: block; color: var(--muted); font-size: 11px; margin-top: 6px; }
 @media(max-width:900px){.control-header{gap:16px;flex-wrap:wrap;}.control-header-actions{margin-left:auto;}.control-member-layout{grid-template-columns:minmax(240px,.8fr) minmax(0,1.4fr);}.control-sticker-layout,.control-reports{grid-template-columns:1fr;}}
 @media(max-width:640px){.control-header .brand{width:100px;}.control-header h1{font-size:22px;}.control-header-actions{width:100%;justify-content:space-between;}.control-summary{gap:8px;}.control-summary .card{padding:14px 9px;gap:8px;}.control-summary .card>svg{display:none;}.control-summary strong{font-size:24px;}.control-summary span{font-size:10px;}.control-member-layout{grid-template-columns:1fr;}.control-main .card{padding:18px 14px;}.control-member-totals{gap:6px;}.control-tabs button{padding:11px 12px;font-size:12px;}}
+
+.control-skills-layout { display:grid; grid-template-columns:minmax(260px,360px) minmax(0,1fr); gap:22px; align-items:start; }
+.control-skills-layout h2 { display:flex;align-items:center;gap:10px; }
+.control-skills-layout input[type=file] { max-width:100%;font-size:13px; }
+.control-skills-layout progress {width:100%;accent-color:var(--blue);}
+.control-skill-list { display:grid;gap:22px;margin-top:20px; }
+.control-skill-video { min-width:0;padding-bottom:20px;border-bottom:1px solid var(--line); }
+.control-skill-video:last-child { border-bottom:0;padding-bottom:0; }
+.control-skill-video video { width:100%;max-height:330px;background:#111;border-radius:14px; }
+.control-skill-video h3 {margin:12px 0 4px;overflow-wrap:anywhere;}
+.control-video-status {font-size:11px;padding:5px 9px;border-radius:20px;background:#edf5fb;white-space:nowrap;}
+.control-video-actions,.control-video-confirm {display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px;}
+.control-video-confirm {padding:14px;background:#f5f7f9;border-radius:12px;}
+.control-video-confirm p {width:100%;margin:0;}
+@media(max-width:850px) {.control-skills-layout {grid-template-columns:minmax(0,1fr);}}
