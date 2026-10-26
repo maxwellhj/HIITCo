@@ -1514,7 +1514,7 @@ td > svg {
   padding: 18px 21px;
   margin-top: 16px;
   min-height: 76px;
-  background: #eff4f8;
+  background: #fff;
 }
 .home-library-button > span {
   font-size: 15px;
@@ -1529,7 +1529,7 @@ td > svg {
   color: var(--muted);
 }
 .home-library-button:hover {
-  background: #e4eef5;
+  background: #fff;
 }
 .home-next-event {
   display: flex;

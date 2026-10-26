@@ -81,6 +81,13 @@ export function HomePage({
       </div>
       <AttendanceWeek memberId={member.id} events={data.attendance} />
       <WeeklyWorkouts week={s.currentWeek} />
+      <a className="home-library-button" href="#skills">
+        <BoxingGlove size={25} />
+        <span>
+          Skills Library<small>Box · Lift · Sweat</small>
+        </span>
+        <ArrowRight size={18} />
+      </a>
       <Card className="club-events">
         <h2>
           <CalendarDays size={17} />
@@ -104,13 +111,7 @@ export function HomePage({
           View calendar <ArrowRight size={15} />
         </a>
       </Card>
-      <a className="home-library-button" href="#skills">
-        <BoxingGlove size={25} />
-        <span>
-          Skills Library<small>Box · Lift · Sweat</small>
-        </span>
-        <ArrowRight size={18} />
-      </a>
+
       <a className="gymmaster-connect-link" href="#connect">
         <Link2 size={16} />
         Connect GymMaster <span>Connection test</span>

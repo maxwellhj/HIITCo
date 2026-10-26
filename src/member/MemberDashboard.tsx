@@ -307,6 +307,13 @@ export function MemberDashboard({
         </Card>
       ) : (
         <>
+          <a className="home-library-button" href="#skills">
+            <BoxingGlove size={25} />
+            <span>
+              Skills Library<small>Box · Lift · Sweat</small>
+            </span>
+            <ArrowRight size={18} />
+          </a>
           <Card className="club-events">
             <h2>
               <CalendarDays size={17} /> Upcoming club events
@@ -335,13 +342,6 @@ export function MemberDashboard({
               View calendar <ArrowRight size={15} />
             </a>
           </Card>
-          <a className="home-library-button" href="#skills">
-            <BoxingGlove size={25} />
-            <span>
-              Skills Library<small>Box · Lift · Sweat</small>
-            </span>
-            <ArrowRight size={18} />
-          </a>
         </>
       )}
     </div>
