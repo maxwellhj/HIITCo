@@ -3187,3 +3187,12 @@ td > svg {
 .event-booking-link {display:inline-flex;align-items:center;justify-content:center;text-decoration:none;margin-top:18px;}
 @media(max-width:760px){.control-club-layout{grid-template-columns:minmax(0,1fr);}}
 .event-detail h3,.control-calendar-event h3 {overflow-wrap:anywhere;}
+
+.control-goal-toggle {padding:0;border:0;background:transparent;text-align:left;min-width:0;color:var(--muted);}
+.control-goal-toggle > span {display:block;}
+.control-goal-toggle strong {display:flex;gap:5px;align-items:baseline;flex-wrap:wrap;}
+.control-goal-toggle strong small {font-size:12px;font-weight:500;white-space:nowrap;}
+.control-goal-toggle > small {display:block;font-size:10px;margin-top:5px;}
+.control-goal-toggle:hover {color:#195c90;}
+.control-goal-toggle:focus-visible {outline:2px solid #558eb9;outline-offset:5px;border-radius:4px;}
+.control-goal-editor {margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}

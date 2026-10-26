@@ -67,7 +67,7 @@ Published workouts refresh when the app becomes visible or regains focus. Member
 
 ## Individual member weekly goals
 
-In **Members**, select a member and use their **Your weekly goal** card. Choose 1–7 training days per week and select **Save member goal**. This overrides the club default for that member only. Choose **Use club default** and save to remove the override; future club-default changes then apply automatically. Changing the club-wide default never overwrites an individual goal.
+In **Members**, select a member and click the **Training this week — X out of Y** counter in their summary box. It opens the weekly-goal editor inside the same box. Choose 1–7 training days per week and select **Save member goal**. The editor collapses after saving. The numerator counts distinct dates in the member’s training log this NZ week, not lifetime exercise entries or complete GymMaster attendance; it is labelled **Logged days**. This overrides the club default for that member only. Choose **Use club default** and save to remove the override; future club-default changes then apply automatically. Changing the club-wide default never overwrites an individual goal.
 
 Individual goals use the same protected member-management access as member records and sticker awards. The backend validates the member exists and stores the override encrypted under that member's private identifier. The member app resolves its own goal from the encrypted session, never from a client-supplied member ID. It refreshes while visible, on return, or on reopening Home. Existing training-day counting and streak definitions remain unchanged. No new binding or secret is required.
 

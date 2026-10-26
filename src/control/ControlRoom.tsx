@@ -1,6 +1,6 @@
 import { ClubManager } from "./ClubManager";
 import { SkillsManager } from "./SkillsManager";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import {
   Bell,
   CalendarDays,
@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { Brand, Card } from "../components/UI";
 import { TrainingChart } from "../components/TrainingChart";
-import { dateKey, formatDate, shiftDate } from "../domain/attendance";
+import { dateKey, formatDate, shiftDate, weekKey } from "../domain/attendance";
 import {
   exerciseProgress,
   parseTrainingLog,
@@ -447,6 +447,15 @@ function MemberGoal({
   onSaved: () => void;
   onAccessError: (error: unknown) => void;
 }) {
+  const editorId = useId();
+  const today = dateKey(new Date()),
+    monday = weekKey(today);
+  const completed = new Set(
+    detail.training.sessions
+      .filter((s) => s.date >= monday && s.date <= today)
+      .map((s) => s.date),
+  ).size;
+  const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(
       detail.weeklyTargetOverride === null
         ? "default"
@@ -463,70 +472,108 @@ function MemberGoal({
     );
   }, [detail.weeklyTargetOverride]);
   return (
-    <Card>
-      <h2>Your weekly goal</h2>
-      <p className="small muted">
-        Set {detail.member.firstName}’s training-days goal. Multiple visits on
-        the same day count once.
-      </p>
-      <form
-        className="control-form"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          setBusy(true);
-          setError("");
-          setMessage("");
-          try {
-            await controlApi("member-goal", {
-              memberKey: detail.member.memberKey,
-              weeklyTarget: value === "default" ? null : Number(value),
-            });
-            setMessage(
-              "Weekly goal saved for " + detail.member.firstName + ".",
-            );
-            onSaved();
-          } catch (err) {
-            setError("Couldn’t save the weekly goal. Please try again.");
-            if (err instanceof ControlError && err.status === 403)
-              onAccessError(err);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <label>
-          Member weekly training goal
-          <select
-            aria-label="Member weekly training goal"
-            value={value}
-            disabled={busy}
-            onChange={(e) => setValue(e.target.value)}
-          >
-            <option value="default">
-              Use club default ({detail.clubWeeklyTarget} days)
-            </option>
-            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-              <option key={n} value={n}>
-                {n} {n === 1 ? "day" : "days"} per week
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="primary" disabled={busy}>
-          {busy ? "Saving…" : "Save member goal"}
+    <>
+      <div className="control-member-totals">
+        <span>
+          Total visits<strong>{detail.member.totalVisits ?? "—"}</strong>
+        </span>
+        <button
+          className="control-goal-toggle"
+          aria-label={"Edit weekly goal for " + name(detail.member)}
+          aria-expanded={editing}
+          aria-controls={editorId}
+          disabled={busy}
+          onClick={() => setEditing(!editing)}
+        >
+          <span>Training this week</span>
+          <strong>
+            {completed}
+            <small>out of {detail.weeklyTarget}</small>
+          </strong>
+          <small>Logged days · Edit goal {editing ? "▴" : "▾"}</small>
         </button>
-      </form>
-      <p className="small muted">
-        Current goal: {detail.weeklyTarget} training{" "}
-        {detail.weeklyTarget === 1 ? "day" : "days"} per week.
-      </p>
+        <span>
+          CHOW attempts<strong>{detail.chow.scores.length}</strong>
+        </span>
+      </div>
+      {editing && (
+        <div id={editorId} className="control-goal-editor">
+          <p className="small muted">
+            Choose the weekly training-days goal for {detail.member.firstName}.
+            The counter shows distinct days in their training log this week.
+          </p>
+          <form
+            className="control-form"
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setBusy(true);
+              setError("");
+              setMessage("");
+              try {
+                await controlApi("member-goal", {
+                  memberKey: detail.member.memberKey,
+                  weeklyTarget: value === "default" ? null : Number(value),
+                });
+                setMessage(
+                  "Weekly goal saved for " + detail.member.firstName + ".",
+                );
+                setEditing(false);
+                onSaved();
+              } catch (err) {
+                setError("Couldn’t save the weekly goal. Please try again.");
+                if (err instanceof ControlError && err.status === 403)
+                  onAccessError(err);
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <label>
+              Member weekly training goal
+              <select
+                aria-label="Member weekly training goal"
+                value={value}
+                disabled={busy}
+                onChange={(e) => setValue(e.target.value)}
+              >
+                <option value="default">
+                  Use club default ({detail.clubWeeklyTarget} days)
+                </option>
+                {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+                  <option key={n} value={n}>
+                    {n} {n === 1 ? "day" : "days"} per week
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button className="primary" disabled={busy}>
+              {busy ? "Saving…" : "Save member goal"}
+            </button>
+            <button
+              type="button"
+              className="text-button"
+              disabled={busy}
+              onClick={() => {
+                setValue(
+                  detail.weeklyTargetOverride === null
+                    ? "default"
+                    : String(detail.weeklyTargetOverride),
+                );
+                setEditing(false);
+              }}
+            >
+              Cancel
+            </button>
+          </form>
+        </div>
+      )}
       {message && <p role="status">{message}</p>}
       {error && (
         <p role="alert" className="error">
           {error}
         </p>
       )}
-    </Card>
+    </>
   );
 }
 function MemberInspector({
@@ -639,24 +686,13 @@ function MemberInspector({
             <X size={18} />
           </button>
         </div>
-        <div className="control-member-totals">
-          <span>
-            Total visits<strong>{detail.member.totalVisits ?? "—"}</strong>
-          </span>
-          <span>
-            Training sessions<strong>{detail.training.sessions.length}</strong>
-          </span>
-          <span>
-            CHOW attempts<strong>{detail.chow.scores.length}</strong>
-          </span>
-        </div>
+        <MemberGoal
+          key={memberKey}
+          detail={detail}
+          onSaved={onChanged}
+          onAccessError={onAccessError}
+        />
       </Card>
-      <MemberGoal
-        key={memberKey}
-        detail={detail}
-        onSaved={onChanged}
-        onAccessError={onAccessError}
-      />
       <Card>
         <h2>Strength Metrics</h2>
         {stats && stats.history.length ? (
