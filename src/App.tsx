@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   ArrowDownToLine,
   Bell,
@@ -466,8 +466,15 @@ function App() {
     </div>
   );
 }
+const ControlRoom = lazy(() => import("./control/ControlRoom"));
 export default function RootApp() {
   const [demo, setDemo] = useState(false);
+  if (location.pathname.replace(/\/+$/, "") === "/control-room")
+    return (
+      <Suspense fallback={<p role="status">Loading Control Room…</p>}>
+        <ControlRoom />
+      </Suspense>
+    );
   return demo ? (
     <>
       <div className="demo-mode-banner">

@@ -1,40 +1,34 @@
-# HIIT Co. Control Room — proposed first release
+# HIIT Co. Control Room
 
-A protected staff website connected to the same member data as HIIT Co. Hub. Routine member, sticker and content management should happen here without code changes or Codex. This document is a build plan; it does not expose an admin page or grant staff access.
+The single website at `/control-room` manages app members, digital stickers, strength metrics and personal-best activity. It has no staff login. Private APIs require an allowed public network address; the initial configuration denies access until that address is set.
 
-## What staff should see
+## Enable the connection
 
-- **Members:** search the people who use the app, open a member profile and see recent app activity. Keep the app-user list distinct from the full GymMaster club roster.
-- **Member profile:** visit totals, strength exercises, weight/volume charts, CHOW sets and the member's Trophy Room. Staff view the same records the member sees rather than maintaining a second set of results.
-- **Trophy Room management:** upload the actual club sticker artwork, set its name/description, then toggle each sticker on or off for a selected member. Show who changed an award and when. Members see the result when their Trophy Room refreshes, without a deployment or reinstall.
-- **Activity feed:** new weight/volume personal bests, new CHOW records and recently awarded stickers, with links to the member's profile. Let staff mark activity as read. Phone notifications can be added later with member opt-in.
-- **Owner settings:** invite/remove staff and decide who may view member information, manage stickers or administer staff. Use individual logins rather than a shared password.
+In Cloudflare → Workers & Pages → hiitco → Settings → Variables and Secrets, add a **Text** variable named `CONTROL_ROOM_ALLOWED_IPS` containing the staff connection's public IPv4 or IPv6 address. Deploy the variable change. Multiple addresses can be separated by commas. Narrow CIDRs are supported (IPv4 /24 or narrower; IPv6 /48 or narrower). Missing, malformed or broad ranges fail closed. `keep_vars` preserves dashboard variables during code deployments.
 
-## Build order
+Everyone sharing an allowed public address can use these controls, including guests on the same internet connection. Use a staff-only connection/address if the club WiFi is shared. This is network access, not individual staff authentication. Changes cannot be attributed to individual staff members. A changing public address requires updating the variable. The public page never grants authority on its own; member cookies do not grant Control Room access.
 
-1. **Staff sign-in and app-user directory.** Select the owner sign-in identity, invite staff and enforce their permissions on every staff API request. Populate the directory from successful authenticated app sign-ins/profile loads. Existing member stores have no central searchable directory, so previous users need to sign in again or be imported from an authorised member-ID list; do not pretend all historic app users can already be enumerated.
-2. **Read-only member profiles and Strength Metrics.** Add the member list, search and detail screen, reading actual private account records. Keep member sessions restricted to their own records. The separate openly accessible fictional demo is never a source of staff authority.
-3. **Sticker catalogue and award toggles.** Accept the club's actual artwork, store it once and record member awards independently. Add grant/revoke controls and an activity history. Connect the member Trophy Room to its own award endpoint and refresh while open or when the app becomes visible.
-4. **Personal-best activity.** Detect improvements during successful server-side training/CHOW saves. Compare the same exercise or challenge and scoring unit, record each event once and handle retries, edits and deleted sessions without duplicate or misleading alerts.
-5. **Content management.** Add club events, skill videos and announcements. Link to the existing workout builder initially; its approved publishing flow already feeds the app.
+The deployment adds a `CONTROL_STORE` SQLite Durable Object and migration automatically. Existing training, attendance and workout-builder bindings remain in place.
 
-## Practical architecture
+## Daily use
 
-Use Cloudflare for the staff site and backend, alongside the existing app and workout builder. A separate staff URL can have a dedicated sign-in while the sites share server-authorised data services. The browser must never receive an integration key or gain authority merely from a hidden staff button.
+- **Members:** search by name or GymMaster ID. Members enter this directory after a successful authenticated app profile refresh. Existing app users should refresh/reopen their profile; this is not a complete club roster or a historic user import.
+- **Member detail:** view the member's actual training records, strength charts, CHOW records and total visits. Select a member before toggling their stickers.
+- **Stickers:** upload the club's actual PNG, JPEG or WebP artwork (up to 256 KB), plus a name and description. Toggle awards in member detail. The member Trophy Room refreshes while visible and on return to the app. Artwork is served to awarded members only; locked stickers show a placeholder.
+- **Activity:** new weight, training-volume and CHOW personal bests, plus sticker grant/revoke events. Mark items read; read state is shared by this Control Room. These are website notifications, not phone push or email. A first session establishes a baseline. Corrected/deleted records reconcile the feed; saves queue a durable retry if feed sync fails. Each member's latest 100 PB events are retained in the snapshot.
 
-The app currently stores encrypted training and CHOW logs in member-specific SQLite Durable Objects. Add a searchable server-side directory mapping authorised GymMaster identities to these records. Avoid duplicating their training history. Before production admin access, separate the long-lived data-encryption key from the rotating GymMaster API key, with an explicit migration/key-retention plan so member histories remain readable.
+The directory is paginated and the website loads up to 10,000 entries. The activity query currently reads up to 4,000 member/kind snapshots plus the latest 100 sticker changes. This release has no catalogue deletion, staff accounts or automatic sticker-unlock rules.
 
-A managed staff sign-in service should issue verified identities; a server-side staff-role registry determines access. Owner: staff permissions and catalogue management. Coach: allowed member views and sticker assignments. Every staff read/write must be checked server-side, including image uploads and grant/revoke requests. Store an audit record for changes.
+## GymMaster reports
 
-Store sticker metadata and awards in the backend and artwork in object storage, keeping private member data out of public files and browser caches. Define stable sticker IDs so replacing artwork does not revoke awards. Do not fabricate earned stickers from attendance or create automatic rules unless the owner chooses those rules.
+The Reports tab can connect the reports key directly on the website. It checks the provider's available-report list before saving the key encrypted on the server. Never paste integration secrets into chat or source code. An optional `GYMMASTER_REPORTS_KEY` Worker secret is also supported as a fallback.
 
-For PB notifications, commit the training update and an event/outbox record together, then deliver the staff feed with idempotent event IDs. First sessions establish baselines rather than automatically generating a flood of personal-best alerts. If a result is corrected or deleted, reconcile the displayed best and its activity entry. In-app activity should be the first notification channel; push requires subscriptions, permission prompts and delivery handling.
+The backend calls only the fixed GymMaster report endpoint with `X-GM-API-KEY`. Choose an actual report returned by the provider, then supply a date range. The preview requests Member ID and Member Name and strips additional returned columns. No report ID is guessed. Report results may be cached by GymMaster for six hours. Previewing a club roster does not import it as app users. Reports are optional: sticker controls and strength metrics work independently.
 
-## Inputs needed before implementing privileged access
+## Storage and verification
 
-- Owner identity and staff invitation/sign-in method.
-- Which permissions coaches receive.
-- The club's actual sticker files and names.
-- Initial app-user directory strategy: future sign-ins only, or an authorised member-ID import.
+Profile directory entries, sticker metadata/artwork, report credentials, activity snapshots and training records are encrypted server-side using the existing `GYMMASTER_API_KEY` encryption derivation. Awards and internal lookup identifiers remain in private SQLite tables. Do not rotate that key without a migration/key-retention plan for existing encrypted data. Browsers receive no integration key and private responses use no-store caching.
 
-No staff IDs have been authorised yet. No staff access, sticker-grant endpoint or public member directory is enabled by this plan.
+Training and CHOW saves retain their revision checks. Their PB snapshot is queued atomically with the log, retried after failure, and centrally guarded against older revisions. Repeated award requests do not create duplicate activity. Member trophy and artwork requests use the member's authenticated session identity rather than a client-supplied member ID.
+
+Tests cover network denial, encrypted directory/report storage, artwork validation, cross-member isolation, award idempotence, PB corrections and retries, report response filtering, and persistence across Worker restarts. Production GymMaster credentials and live member data are not used in these checks.

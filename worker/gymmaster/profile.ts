@@ -1,3 +1,4 @@
+import { registerAppMember } from "../control/data";
 import { apiJson, limitedText, type AuthEnv } from "./auth";
 import { clearSessionCookie, readSession } from "./session";
 import { parseMemberProfile } from "../../src/domain/gymmasterProfile";
@@ -70,6 +71,11 @@ export async function gymMasterProfile(
     if (typeof data.error === "string" && data.error.trim())
       return apiJson({ error: "profile_not_available" }, 502);
     const profile = parseMemberProfile(data.result, session.memberId);
+    try {
+      await registerAppMember(env, session.memberId, profile);
+    } catch {
+      console.warn("CONTROL-DIRECTORY-UNAVAILABLE");
+    }
     return apiJson({ profile });
   } catch (error) {
     if (

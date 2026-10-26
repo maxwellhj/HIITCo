@@ -6,6 +6,7 @@ import {
   sessionCookie,
 } from "./session";
 export interface AuthEnv {
+  CONTROL_STORE?: import("../control/types").ControlNamespace;
   GYMMASTER_API_KEY?: string;
   LOGIN_RATE_LIMITER?: {
     limit(options: { key: string }): Promise<{ success: boolean }>;

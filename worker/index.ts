@@ -1,3 +1,6 @@
+import { controlApi, memberTrophies } from "./control/api";
+import type { ControlEnv } from "./control/access";
+export { ControlStore } from "./control/store";
 import { gymMasterAuth, type AuthEnv } from "./gymmaster/auth";
 import { gymMasterVisits } from "./gymmaster/visits";
 import { gymMasterProfile } from "./gymmaster/profile";
@@ -7,7 +10,8 @@ import { memberTraining, type TrainingEnv } from "./training";
 export { MemberTrainingStore } from "./training";
 import { memberWorkouts, type WorkoutEnv } from "./workouts";
 export { GymMasterCheckinInbox } from "./gymmaster/webhookInbox";
-export interface Env extends AuthEnv, WebhookEnv, TrainingEnv, WorkoutEnv {
+export interface Env
+  extends AuthEnv, WebhookEnv, TrainingEnv, WorkoutEnv, ControlEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
 }
 
@@ -36,6 +40,10 @@ export default {
       // Public liveness only. Never reveal secret values or credential status.
       return json({ status: "ok" });
     }
+    const controlResponse = await controlApi(request, env);
+    if (controlResponse) return controlResponse;
+    const trophyResponse = await memberTrophies(request, env);
+    if (trophyResponse) return trophyResponse;
     const webhookResponse = await gymMasterWebhook(request, env);
     if (webhookResponse) return webhookResponse;
     const authResponse = await gymMasterAuth(request, env);

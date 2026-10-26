@@ -1,3 +1,4 @@
+import { personalBests } from "../src/domain/control";
 import { emptyChowLog, parseChowLog } from "../src/domain/chow";
 import { apiJson, limitedText, type AuthEnv } from "./gymmaster/auth";
 import { readSession, clearSessionCookie } from "./gymmaster/session";
@@ -214,7 +215,7 @@ export async function memberTraining(
       new Request(storageUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sealed, revision }),
+        body: JSON.stringify({ sealed, revision, memberKey }),
       }),
     );
     if (response.status === 409)
@@ -233,18 +234,71 @@ interface StoreState {
       exec<T = Record<string, unknown>>(
         query: string,
         ...args: unknown[]
-      ): { one(): T };
+      ): { one(): T; toArray(): T[] };
     };
     transactionSync<T>(callback: () => T): T;
+    setAlarm?(time: number): Promise<void>;
   };
 }
 /** Private per-member Durable Object. Only encrypted content reaches storage. */
 export class MemberTrainingStore {
-  constructor(private state: StoreState) {
+  constructor(
+    private state: StoreState,
+    private env: TrainingEnv = {},
+  ) {
     for (const table of ["training_log", "chow_log"])
       state.storage.sql.exec(
         `CREATE TABLE IF NOT EXISTS ${table} (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, sealed TEXT NOT NULL)`,
       );
+    state.storage.sql.exec(
+      "CREATE TABLE IF NOT EXISTS control_sync (kind TEXT PRIMARY KEY,member_key TEXT NOT NULL,revision INTEGER NOT NULL,sealed TEXT NOT NULL)",
+    );
+  }
+  private async flushSync() {
+    if (!this.env.CONTROL_STORE) return;
+    const sql = this.state.storage.sql;
+    try {
+      const rows = sql
+        .exec<{
+          kind: string;
+          member_key: string;
+          revision: number;
+          sealed: string;
+        }>("SELECT kind,member_key,revision,sealed FROM control_sync")
+        .toArray();
+      for (const row of rows) {
+        const response = await this.env.CONTROL_STORE.get(
+          this.env.CONTROL_STORE.idFromName("hiitco-control-v1"),
+        ).fetch(
+          new Request("https://control.internal/metrics", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              memberKey: row.member_key,
+              kind: row.kind,
+              revision: row.revision,
+              sealed: row.sealed,
+            }),
+          }),
+        );
+        if (!response.ok) throw Error();
+        sql.exec(
+          "DELETE FROM control_sync WHERE kind=? AND revision=?",
+          row.kind,
+          row.revision,
+        );
+      }
+    } finally {
+      if (
+        sql
+          .exec<{ count: number }>("SELECT count(*) AS count FROM control_sync")
+          .one().count > 0
+      )
+        await this.state.storage.setAlarm?.(Date.now() + 60000);
+    }
+  }
+  async alarm() {
+    await this.flushSync();
   }
   async fetch(request: Request) {
     const path = new URL(request.url).pathname;
@@ -257,12 +311,19 @@ export class MemberTrainingStore {
           `SELECT COALESCE((SELECT revision FROM ${table} WHERE id=1),0) AS revision,(SELECT sealed FROM ${table} WHERE id=1) AS sealed`,
         )
         .one();
+      if (this.env.CONTROL_STORE) {
+        try {
+          await this.flushSync();
+        } catch {
+          console.warn("CONTROL-SYNC-PENDING");
+        }
+      }
       return apiJson(result);
     }
     if (request.method !== "POST")
       return apiJson({ error: "method_not_allowed" }, 405);
     try {
-      const { sealed, revision } = JSON.parse(
+      const { sealed, revision, memberKey } = JSON.parse(
         await limitedText(request.body, 600000),
       );
       if (
@@ -272,6 +333,30 @@ export class MemberTrainingStore {
         revision < 0
       )
         throw Error();
+      let snapshot: string | null = null;
+      const kind = path === "/chow" ? "chow" : "training";
+      if (this.env.CONTROL_STORE) {
+        if (
+          !this.env.GYMMASTER_API_KEY ||
+          typeof memberKey !== "string" ||
+          !/^[a-f0-9]{64}$/.test(memberKey)
+        )
+          throw Error();
+        const log = await openTraining(
+          sealed,
+          this.env.GYMMASTER_API_KEY,
+          path === "/chow" ? `${memberKey}:chow-v1` : memberKey,
+        );
+        const parsed =
+          kind === "chow"
+            ? await parseChowLog(log, dateKey(new Date()))
+            : parseTrainingLog(log, dateKey(new Date()));
+        snapshot = await sealTraining(
+          personalBests(parsed, kind),
+          this.env.GYMMASTER_API_KEY,
+          `control.metrics:${memberKey}:${kind}`,
+        );
+      }
       const saved = this.state.storage.transactionSync(() => {
         const current = this.state.storage.sql
           .exec<{ revision: number }>(
@@ -284,8 +369,23 @@ export class MemberTrainingStore {
           revision + 1,
           sealed,
         );
+        if (snapshot)
+          this.state.storage.sql.exec(
+            "INSERT INTO control_sync(kind,member_key,revision,sealed) VALUES(?,?,?,?) ON CONFLICT(kind) DO UPDATE SET member_key=excluded.member_key,revision=excluded.revision,sealed=excluded.sealed",
+            kind,
+            memberKey,
+            revision + 1,
+            snapshot,
+          );
         return true;
       });
+      if (saved && snapshot) {
+        try {
+          await this.flushSync();
+        } catch {
+          console.warn("CONTROL-SYNC-PENDING");
+        }
+      }
       return saved
         ? apiJson({ revision: revision + 1 })
         : apiJson({ error: "conflict" }, 409);

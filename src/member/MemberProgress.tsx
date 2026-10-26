@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, LockKeyhole, Trophy, TrendingUp } from "lucide-react";
 import { Card } from "../components/UI";
 import { TrainingChart } from "../components/TrainingChart";
-import { clubStickers } from "../data/stickers";
+import type { ClubSticker } from "../domain/control";
 import { dateKey, formatDate } from "../domain/attendance";
 import {
   exerciseProgress,
@@ -12,12 +12,64 @@ import {
 import { memberApi, MemberApiError } from "./api";
 const number = (value: number) =>
   value.toLocaleString("en-NZ", { maximumFractionDigits: 2 });
-export function TrophyRoom({
-  earnedStickerIds = [],
-}: {
-  earnedStickerIds?: readonly string[];
-}) {
-  const earned = new Set(earnedStickerIds);
+export function TrophyRoom() {
+  const [data, setData] = useState<{
+      stickers: ClubSticker[];
+      earnedStickerIds: string[];
+    } | null>(null),
+    [error, setError] = useState("");
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    let active = true;
+    let abort: AbortController | null = null;
+    const refresh = () => {
+      abort?.abort();
+      const current = new AbortController();
+      abort = current;
+      void memberApi("trophies", undefined, current.signal)
+        .then((result) => {
+          if (
+            !Array.isArray(result.stickers) ||
+            !Array.isArray(result.earnedStickerIds) ||
+            result.stickers.length > 100 ||
+            result.earnedStickerIds.some((id) => typeof id !== "string")
+          )
+            throw Error();
+          if (active && abort === current && !current.signal.aborted) {
+            setData(
+              result as unknown as {
+                stickers: ClubSticker[];
+                earnedStickerIds: string[];
+              },
+            );
+            setError("");
+          }
+        })
+        .catch(() => {
+          if (active && abort === current && !current.signal.aborted) {
+            setData(null);
+            setError(
+              "Your Trophy Room is temporarily unavailable. Please try again.",
+            );
+          }
+        });
+    };
+    refresh();
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") refresh();
+    }, 15000);
+    const visible = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      active = false;
+      abort?.abort();
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", visible);
+    };
+  }, [attempt]);
+  const earned = new Set(data?.earnedStickerIds ?? []);
   return (
     <Card className="trophy-room">
       <div className="section-top">
@@ -26,12 +78,27 @@ export function TrophyRoom({
           Trophy Room
         </h2>
         <span className="small muted">
-          {clubStickers.filter((s) => earned.has(s.id)).length} collected
+          {data ? data.stickers.filter((s) => earned.has(s.id)).length : "—"}{" "}
+          collected
         </span>
       </div>
-      {clubStickers.length ? (
+      {error ? (
+        <>
+          <p role="alert" className="error">
+            {error}
+          </p>
+          <button
+            className="text-button"
+            onClick={() => setAttempt((v) => v + 1)}
+          >
+            Try again
+          </button>
+        </>
+      ) : !data ? (
+        <p role="status">Loading your stickers…</p>
+      ) : data.stickers.length ? (
         <div className="sticker-grid">
-          {clubStickers.map((s) => (
+          {data.stickers.map((s) => (
             <div
               key={s.id}
               className={`collectable-sticker ${earned.has(s.id) ? "earned" : "locked"}`}
