@@ -1,3 +1,4 @@
+import { EventResponse } from "../components/EventResponse";
 import { useState } from "react";
 import { ArrowRight, CalendarDays, Flame, Trophy, X } from "lucide-react";
 import { Card } from "../components/UI";
@@ -35,7 +36,7 @@ export function MemberDashboard({
   progress?: boolean;
   showStats?: boolean;
 }) {
-  const { data: club, error: clubError } = useClubContent();
+  const { data: club, error: clubError, respond } = useClubContent();
   const today = dateKey(new Date());
   const trained = trainingDays(days, checkins, today);
   const [week, setWeek] = useState(0),
@@ -337,6 +338,17 @@ export function MemberDashboard({
                     ? "Loading club events…"
                     : "No upcoming events just yet."}
               </p>
+            )}
+            {event && (
+              <EventResponse
+                event={event}
+                value={
+                  club?.eventResponses?.find(
+                    (response) => response.eventId === event.id,
+                  )?.status
+                }
+                onRespond={respond}
+              />
             )}
             <a className="text-button" href="#events">
               View calendar <ArrowRight size={15} />

@@ -1,7 +1,4 @@
-import {
-  eventResponseLabels,
-  type EventResponseStatus,
-} from "../domain/events";
+import { EventResponse } from "../components/EventResponse";
 import { useClubContent } from "../member/useClubContent";
 import { eventTimeLabel } from "../domain/club";
 import { useEffect, useRef, useState } from "react";
@@ -23,71 +20,6 @@ import {
   upcomingEvents,
 } from "../domain/events";
 
-function EventRsvp({
-  eventId,
-  title,
-  value,
-  onRespond,
-  booking,
-}: {
-  eventId: string;
-  title: string;
-  value?: EventResponseStatus;
-  onRespond: (id: string, status: EventResponseStatus) => Promise<void>;
-  booking: boolean;
-}) {
-  const [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  return (
-    <div className="event-rsvp">
-      <h4>Your response</h4>
-      <div
-        className="event-rsvp-options"
-        role="group"
-        aria-label={"Your response to " + title}
-      >
-        {(["going", "maybe", "cant_attend"] as const).map((status) => (
-          <button
-            key={status}
-            className={status}
-            aria-pressed={value === status}
-            disabled={busy}
-            onClick={async () => {
-              setBusy(true);
-              setError("");
-              try {
-                await onRespond(eventId, status);
-              } catch {
-                setError("Couldn’t save your response. Please try again.");
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            {eventResponseLabels[status]}
-          </button>
-        ))}
-      </div>
-      <p className="small muted" aria-live="polite">
-        {busy
-          ? "Saving your response…"
-          : value
-            ? `Your response: ${eventResponseLabels[value]}`
-            : "Choose your response. You can change it later."}
-      </p>
-      {booking && (
-        <p className="small muted">
-          If you’re going, use the booking link to reserve your place.
-        </p>
-      )}
-      {error && (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      )}
-    </div>
-  );
-}
 export function Events({ demo = false }: { demo?: boolean }) {
   const { data, error, reload, respond } = useClubContent(!demo);
   const clubEvents = demo ? demoEvents : (data?.events ?? []);
@@ -241,6 +173,17 @@ export function Events({ demo = false }: { demo?: boolean }) {
                     </p>
                   )}
                 </div>
+                {!demo && (
+                  <EventResponse
+                    event={event}
+                    value={
+                      data?.eventResponses?.find(
+                        (response) => response.eventId === event.id,
+                      )?.status
+                    }
+                    onRespond={respond}
+                  />
+                )}
                 <h4>About this event</h4>
                 <p className="club-event-description">{event.description}</p>
                 {event.bring && (
@@ -248,19 +191,6 @@ export function Events({ demo = false }: { demo?: boolean }) {
                     <Backpack size={18} />
                     <p>{event.bring}</p>
                   </div>
-                )}
-                {!demo && (
-                  <EventRsvp
-                    eventId={event.id}
-                    title={event.title}
-                    value={
-                      data?.eventResponses?.find(
-                        (response) => response.eventId === event.id,
-                      )?.status
-                    }
-                    onRespond={respond}
-                    booking={!!event.bookingUrl}
-                  />
                 )}
                 {event.bookingUrl && (
                   <a

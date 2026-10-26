@@ -3214,3 +3214,14 @@ td > svg {
 .event-response-badge.going {background:#eaf4ed;color:#315e3e;}
 .event-response-badge.maybe {background:#fbf1df;color:#795a27;}
 .event-response-badge.cant_attend {background:#f9eeee;color:#854848;}
+
+.event-calendar-links {display:flex;gap:9px;flex-wrap:wrap;margin:14px 0;}
+.event-calendar-links p,.event-calendar-links small {flex-basis:100%;}
+.event-calendar-links a {display:inline-flex;align-items:center;justify-content:center;text-decoration:none;font-size:12px;padding:10px 12px;}
+.event-calendar-links small {font-size:11px;line-height:1.6;}
+
+.app-update-notice {position:fixed;right:20px;bottom:20px;z-index:200;max-width:380px;padding:20px;border:1px solid #96bfe1;border-radius:14px;background:#fff;box-shadow:var(--card-shadow);}
+.app-update-notice strong {font-size:15px;}
+.app-update-notice p {font-size:12px;margin:8px 0 12px;}
+.app-update-notice > div {display:flex;align-items:center;gap:16px;}
+@media(max-width:760px){.app-update-notice{left:14px;right:14px;bottom:calc(96px + env(safe-area-inset-bottom,0px));max-width:none;}}
