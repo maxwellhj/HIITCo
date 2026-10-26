@@ -1,7 +1,7 @@
 import { apiJson } from "../gymmaster/auth";
 import { readSession } from "../gymmaster/session";
 import { sealTraining, openTraining } from "../training";
-import { controlAllowed, type ControlEnv } from "./access";
+import type { ControlEnv } from "./access";
 import { controlData } from "./data";
 import type { SkillVideo } from "../../src/data/skills";
 import type { ControlNamespace } from "./types";
@@ -45,8 +45,6 @@ export async function skillsApi(
     path === "/api/gymmaster/skills" ||
     path.startsWith("/api/gymmaster/skills/");
   if (!admin && !member) return null;
-  if (admin && !controlAllowed(request, env))
-    return apiJson({ error: "control_access_restricted" }, 403);
   if (!admin && !(await readSession(request, env.GYMMASTER_API_KEY)))
     return apiJson({ error: "session_expired" }, 401);
   if (

@@ -166,6 +166,13 @@ export function SkillsManager({
           Add your coaching videos here. Preview the draft, then publish it for
           members.
         </p>
+        {!available && (
+          <p className="small" role="status">
+            Video storage is not ready yet. You can fill in the details; uploads
+            will be enabled when the app’s video storage connection is ready.
+            Try Refresh after deployment finishes.
+          </p>
+        )}
         <form className="control-form" onSubmit={(e) => void upload(e)}>
           <label>
             Video title
@@ -173,7 +180,7 @@ export function SkillsManager({
               required
               maxLength={100}
               value={title}
-              disabled={busy || !available}
+              disabled={busy}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Back squat technique"
             />
@@ -182,7 +189,7 @@ export function SkillsManager({
             Category
             <select
               value={category}
-              disabled={busy || !available}
+              disabled={busy}
               onChange={(e) => setCategory(e.target.value as SkillCategory)}
             >
               {["Box", "Lift", "Sweat"].map((c) => (
@@ -196,7 +203,7 @@ export function SkillsManager({
               maxLength={500}
               rows={3}
               value={description}
-              disabled={busy || !available}
+              disabled={busy}
               onChange={(e) => setDescription(e.target.value)}
             />
           </label>
@@ -207,7 +214,7 @@ export function SkillsManager({
               type="file"
               accept="video/mp4,video/webm,.mp4,.webm"
               required
-              disabled={busy || !available}
+              disabled={busy}
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
             />
           </label>
@@ -287,14 +294,14 @@ export function SkillsManager({
                 <div className="control-video-actions">
                   <button
                     className={v.published ? "secondary" : "primary"}
-                    disabled={busy || !available}
+                    disabled={busy}
                     onClick={() => void change(v)}
                   >
                     {v.published ? "Unpublish" : "Publish video"}
                   </button>
                   <button
                     className="text-button"
-                    disabled={busy || !available}
+                    disabled={busy}
                     onClick={() => setRemoving(v.id)}
                   >
                     <Trash2 size={15} /> Remove

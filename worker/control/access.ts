@@ -1,6 +1,8 @@
+import type { ControlNamespace } from "./types";
 import type { ControlDataEnv } from "./data";
 export interface ControlEnv extends ControlDataEnv {
   CONTROL_ROOM_ALLOWED_IPS?: string;
+  SKILL_VIDEOS?: ControlNamespace;
   GYMMASTER_REPORTS_KEY?: string;
   CONTROL_RATE_LIMITER?: {
     limit(options: { key: string }): Promise<{ success: boolean }>;

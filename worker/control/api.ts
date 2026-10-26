@@ -100,6 +100,11 @@ export async function controlApi(
     }
     return apiJson({
       available: allowed,
+      skillsAvailable: !!(
+        env.CONTROL_STORE &&
+        env.GYMMASTER_API_KEY &&
+        env.SKILL_VIDEOS
+      ),
       configured: !!env.CONTROL_ROOM_ALLOWED_IPS?.trim(),
       storageReady: allowed ? !!env.CONTROL_STORE : undefined,
       reportsReady: allowed ? reportsReady : undefined,

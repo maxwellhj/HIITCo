@@ -24,7 +24,6 @@ const { join, resolve } = require("node:path");
         compatibilityDate: "2026-10-20",
         bindings: {
           GYMMASTER_API_KEY: keyValue,
-          CONTROL_ROOM_ALLOWED_IPS: "203.0.113.7",
         },
         durableObjects: {
           CONTROL_STORE: { className: "ControlStore", useSQLite: true },
@@ -130,10 +129,13 @@ const { join, resolve } = require("node:path");
   };
   try {
     assert.equal(
-      (await call("/api/control/skills", { ip: "198.51.100.1", member: true }))
-        .status,
-      403,
+      (await call("/api/control/skills", { ip: "198.51.100.1" })).status,
+      200,
     );
+    const status = await getJson("/api/control/status");
+    assert.equal(status.available, false);
+    assert.equal(status.skillsAvailable, true);
+    assert.equal((await call("/api/control/members")).status, 403);
     assert.equal((await call("/api/gymmaster/skills")).status, 401);
     assert.equal(
       (await call("/api/gymmaster/skills", { member: true, expired: true }))
@@ -174,10 +176,7 @@ const { join, resolve } = require("node:path");
       [],
     );
     assert.equal((await call(media, { member: true })).status, 404);
-    assert.equal(
-      (await call(preview, { ip: "198.51.100.1", member: true })).status,
-      403,
-    );
+    assert.equal((await call(preview, { ip: "198.51.100.1" })).status, 200);
     assert.deepEqual(
       Buffer.from(await (await call(preview)).arrayBuffer()),
       bytes,
@@ -242,7 +241,7 @@ const { join, resolve } = require("node:path");
     assert.deepEqual((await getJson("/api/control/skills")).videos, []);
     assert.equal((await call(preview)).status, 404);
     console.log(
-      "PASS Skills Library Worker/SQLite: upload validation, network/session isolation, drafts/publishing/unpublishing/removal, chunked media bytes, seeking/ranges/HEAD, and persistence across restarts.",
+      "PASS Skills Library Worker/SQLite: upload validation, public video management with member-data isolation, drafts/publishing/unpublishing/removal, chunked media bytes, seeking/ranges/HEAD, and persistence across restarts.",
     );
   } finally {
     await mf.dispose();

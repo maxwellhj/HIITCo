@@ -48,8 +48,10 @@ export default function ControlRoom() {
     [access, setAccess] = useState<{
       available: boolean;
       configured: boolean;
+      skillsAvailable?: boolean;
       reportsReady?: boolean;
     } | null>(null);
+  const initialized = useRef(false);
   const generation = useRef(0),
     controller = useRef<AbortController | null>(null);
   function handle(err: unknown) {
@@ -58,7 +60,7 @@ export default function ControlRoom() {
       setSelected(null);
       setStickers([]);
       setActivity([]);
-      setAccess({ available: false, configured: true });
+      setAccess((old) => ({ ...old, available: false, configured: true }));
       setError("This connection does not have Control Room access.");
     } else setError("Couldn’t refresh the Control Room. Please try again.");
   }
@@ -73,6 +75,10 @@ export default function ControlRoom() {
       const status = await controlApi("status", undefined, abort.signal);
       if (current !== generation.current) return;
       setAccess(status);
+      if (!initialized.current) {
+        initialized.current = true;
+        if (!status.available && status.skillsAvailable) setTab("skills");
+      }
       if (!status.available) {
         setMembers([]);
         setStickers([]);
@@ -178,7 +184,7 @@ export default function ControlRoom() {
             </span>
           </Card>
         </div>
-        {access && !access.available && (
+        {access && !access.available && tab !== "skills" && (
           <Card className="control-access-notice">
             <h2>Allow your staff connection to get started</h2>
             <p>
@@ -310,7 +316,7 @@ export default function ControlRoom() {
           />
         ) : tab === "skills" ? (
           <SkillsManager
-            available={!!access?.available}
+            available={!!access?.skillsAvailable}
             onAccessError={handle}
           />
         ) : tab === "activity" ? (
