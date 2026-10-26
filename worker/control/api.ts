@@ -1,3 +1,4 @@
+import { weeklyGoal } from "./weeklyGoal";
 import { apiJson, limitedText } from "../gymmaster/auth";
 import { readSession, clearSessionCookie } from "../gymmaster/session";
 import { openTraining, sealTraining, trainingMemberKey } from "../training";
@@ -148,6 +149,7 @@ export async function controlApi(
         ]);
         return apiJson({
           member,
+          ...(await weeklyGoal(env, id)),
           training: training
             ? parseTrainingLog(training, dateKey(new Date()))
             : emptyTrainingLog(),
@@ -219,6 +221,36 @@ export async function controlApi(
     )
       return apiJson({ error: "invalid_request" }, 400);
     const body = JSON.parse(await limitedText(request.body, 400000));
+    if (path === "/api/control/member-goal") {
+      if (
+        !isKey(body.memberKey) ||
+        !(
+          body.weeklyTarget === null ||
+          (Number.isInteger(body.weeklyTarget) &&
+            body.weeklyTarget >= 1 &&
+            body.weeklyTarget <= 7)
+        )
+      )
+        return apiJson({ error: "invalid_target" }, 400);
+      if (!(await getAppMember(env, body.memberKey)))
+        return apiJson({ error: "not_found" }, 404);
+      const sealed =
+        body.weeklyTarget === null
+          ? null
+          : await sealTraining(
+              { weeklyTarget: body.weeklyTarget },
+              env.GYMMASTER_API_KEY,
+              "control.member-target:" + body.memberKey,
+            );
+      await controlData(env, "/member-target", {
+        memberKey: body.memberKey,
+        sealed,
+      });
+      return apiJson({
+        saved: true,
+        ...(await weeklyGoal(env, body.memberKey)),
+      });
+    }
     if (path === "/api/control/reports/connect") {
       if (typeof body.key !== "string" || !/^[!-~]{16,1000}$/.test(body.key))
         return apiJson({ error: "invalid_reports_key" }, 400);

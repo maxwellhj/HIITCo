@@ -31,6 +31,9 @@ const name = (member: AppMember) =>
 const number = (value: number) =>
   value.toLocaleString("en-NZ", { maximumFractionDigits: 2 });
 type Detail = {
+  weeklyTarget: number;
+  weeklyTargetOverride: number | null;
+  clubWeeklyTarget: number;
   member: AppMember;
   training: TrainingLogData;
   chow: ChowLogData;
@@ -435,6 +438,97 @@ export default function ControlRoom() {
     </div>
   );
 }
+function MemberGoal({
+  detail,
+  onSaved,
+  onAccessError,
+}: {
+  detail: Detail;
+  onSaved: () => void;
+  onAccessError: (error: unknown) => void;
+}) {
+  const [value, setValue] = useState(
+      detail.weeklyTargetOverride === null
+        ? "default"
+        : String(detail.weeklyTargetOverride),
+    ),
+    [busy, setBusy] = useState(false),
+    [message, setMessage] = useState(""),
+    [error, setError] = useState("");
+  useEffect(() => {
+    setValue(
+      detail.weeklyTargetOverride === null
+        ? "default"
+        : String(detail.weeklyTargetOverride),
+    );
+  }, [detail.weeklyTargetOverride]);
+  return (
+    <Card>
+      <h2>Your weekly goal</h2>
+      <p className="small muted">
+        Set {detail.member.firstName}’s training-days goal. Multiple visits on
+        the same day count once.
+      </p>
+      <form
+        className="control-form"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          setError("");
+          setMessage("");
+          try {
+            await controlApi("member-goal", {
+              memberKey: detail.member.memberKey,
+              weeklyTarget: value === "default" ? null : Number(value),
+            });
+            setMessage(
+              "Weekly goal saved for " + detail.member.firstName + ".",
+            );
+            onSaved();
+          } catch (err) {
+            setError("Couldn’t save the weekly goal. Please try again.");
+            if (err instanceof ControlError && err.status === 403)
+              onAccessError(err);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <label>
+          Member weekly training goal
+          <select
+            aria-label="Member weekly training goal"
+            value={value}
+            disabled={busy}
+            onChange={(e) => setValue(e.target.value)}
+          >
+            <option value="default">
+              Use club default ({detail.clubWeeklyTarget} days)
+            </option>
+            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+              <option key={n} value={n}>
+                {n} {n === 1 ? "day" : "days"} per week
+              </option>
+            ))}
+          </select>
+        </label>
+        <button className="primary" disabled={busy}>
+          {busy ? "Saving…" : "Save member goal"}
+        </button>
+      </form>
+      <p className="small muted">
+        Current goal: {detail.weeklyTarget} training{" "}
+        {detail.weeklyTarget === 1 ? "day" : "days"} per week.
+      </p>
+      {message && <p role="status">{message}</p>}
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+    </Card>
+  );
+}
 function MemberInspector({
   memberKey,
   stickers,
@@ -557,6 +651,12 @@ function MemberInspector({
           </span>
         </div>
       </Card>
+      <MemberGoal
+        key={memberKey}
+        detail={detail}
+        onSaved={onChanged}
+        onAccessError={onAccessError}
+      />
       <Card>
         <h2>Strength Metrics</h2>
         {stats && stats.history.length ? (

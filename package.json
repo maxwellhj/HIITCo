@@ -12,7 +12,8 @@
     "deploy:check": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
     "test:skills": "node scripts/check-skills.cjs",
-    "test:club": "node scripts/check-club.cjs"
+    "test:club": "node scripts/check-club.cjs",
+    "test:member-goals": "node scripts/check-member-goals.cjs"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",

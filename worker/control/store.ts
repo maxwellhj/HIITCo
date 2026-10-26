@@ -22,6 +22,7 @@ const stickerId = (value: unknown): value is string =>
 export class ControlStore {
   constructor(private state: State) {
     for (const sql of [
+      "CREATE TABLE IF NOT EXISTS member_targets (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS members (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS stickers (id TEXT PRIMARY KEY,sealed TEXT NOT NULL,art TEXT NOT NULL,mime TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS awards (member_key TEXT NOT NULL,sticker_id TEXT NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(member_key,sticker_id))",
@@ -40,6 +41,25 @@ export class ControlStore {
       sql = this.state.storage.sql;
     try {
       if (request.method === "GET") {
+        if (url.pathname === "/member-target") {
+          const id = url.searchParams.get("id");
+          if (!key(id)) throw Error();
+          return apiJson({
+            sealed:
+              sql
+                .exec<{ sealed: string }>(
+                  "SELECT sealed FROM member_targets WHERE member_key=?",
+                  id,
+                )
+                .toArray()[0]?.sealed ?? null,
+            clubTarget:
+              sql
+                .exec<{ sealed: string }>(
+                  "SELECT sealed FROM settings WHERE id='club-target'",
+                )
+                .toArray()[0]?.sealed ?? null,
+          });
+        }
         if (url.pathname === "/club")
           return apiJson({
             rows: sql
@@ -143,6 +163,37 @@ export class ControlStore {
       if (request.method !== "POST")
         return apiJson({ error: "method_not_allowed" }, 405);
       const body = JSON.parse(await limitedText(request.body, 1100000));
+      if (url.pathname === "/member-target") {
+        if (
+          !key(body.memberKey) ||
+          !(
+            body.sealed === null ||
+            (typeof body.sealed === "string" && body.sealed.length < 2000)
+          )
+        )
+          throw Error();
+        if (
+          !sql
+            .exec(
+              "SELECT member_key FROM members WHERE member_key=?",
+              body.memberKey,
+            )
+            .toArray().length
+        )
+          return apiJson({ error: "not_found" }, 404);
+        if (body.sealed === null)
+          sql.exec(
+            "DELETE FROM member_targets WHERE member_key=?",
+            body.memberKey,
+          );
+        else
+          sql.exec(
+            "INSERT INTO member_targets(member_key,sealed) VALUES(?,?) ON CONFLICT(member_key) DO UPDATE SET sealed=excluded.sealed",
+            body.memberKey,
+            body.sealed,
+          );
+        return apiJson({ saved: true });
+      }
       if (url.pathname === "/club-target") {
         if (typeof body.sealed !== "string" || body.sealed.length > 2000)
           throw Error();

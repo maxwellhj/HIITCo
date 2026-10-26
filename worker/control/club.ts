@@ -1,6 +1,7 @@
+import { weeklyGoal } from "./weeklyGoal";
 import { apiJson, limitedText } from "../gymmaster/auth";
 import { readSession } from "../gymmaster/session";
-import { sealTraining, openTraining } from "../training";
+import { sealTraining, openTraining, trainingMemberKey } from "../training";
 import { controlData } from "./data";
 import type { ControlEnv } from "./access";
 import { parseClubEvent } from "../../src/domain/club";
@@ -13,8 +14,12 @@ export async function clubApi(
     admin =
       path === "/api/control/club" || path.startsWith("/api/control/club/");
   if (!admin && path !== "/api/gymmaster/club") return null;
-  if (!admin && !(await readSession(request, env.GYMMASTER_API_KEY)))
+  const memberSession = admin
+    ? null
+    : await readSession(request, env.GYMMASTER_API_KEY);
+  if (!admin && !memberSession)
     return apiJson({ error: "session_expired" }, 401);
+  if (url.search) return apiJson({ error: "invalid_request" }, 400);
   if (
     request.headers.get("Sec-Fetch-Site") === "cross-site" ||
     (request.method !== "GET" && request.headers.get("Origin") !== url.origin)
@@ -56,8 +61,17 @@ export async function clubApi(
           ),
         ),
       );
+      const goal = memberSession
+        ? await weeklyGoal(
+            env,
+            await trainingMemberKey(
+              memberSession.memberId,
+              env.GYMMASTER_API_KEY,
+            ),
+          )
+        : null;
       return apiJson({
-        weeklyTarget: setting?.weeklyTarget ?? 3,
+        weeklyTarget: goal?.weeklyTarget ?? setting?.weeklyTarget ?? 3,
         events: events.sort(
           (a, b) =>
             a.date.localeCompare(b.date) ||
