@@ -55,7 +55,11 @@ export default function ControlRoom() {
   const generation = useRef(0),
     controller = useRef<AbortController | null>(null);
   function handle(err: unknown) {
-    if (err instanceof ControlError && err.status === 403) {
+    if (
+      err instanceof ControlError &&
+      err.status === 403 &&
+      err.code === "control_access_restricted"
+    ) {
       setMembers([]);
       setSelected(null);
       setStickers([]);

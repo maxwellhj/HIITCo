@@ -1,3 +1,5 @@
+export const MAX_SKILL_VIDEO_BYTES = 100 * 1024 * 1024;
+
 export type SkillCategory = "Box" | "Lift" | "Sweat";
 
 export interface SkillVideo {

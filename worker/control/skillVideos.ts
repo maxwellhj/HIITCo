@@ -3,12 +3,12 @@ import { readSession } from "../gymmaster/session";
 import { sealTraining, openTraining } from "../training";
 import type { ControlEnv } from "./access";
 import { controlData } from "./data";
-import type { SkillVideo } from "../../src/data/skills";
+import { MAX_SKILL_VIDEO_BYTES, type SkillVideo } from "../../src/data/skills";
 import type { ControlNamespace } from "./types";
 export interface SkillsEnv extends ControlEnv {
   SKILL_VIDEOS?: ControlNamespace;
 }
-export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = MAX_SKILL_VIDEO_BYTES;
 const validId = (id: string) => /^[a-f0-9-]{36}$/.test(id);
 async function catalog(
   env: SkillsEnv,

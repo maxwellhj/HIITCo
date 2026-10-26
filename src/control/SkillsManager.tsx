@@ -1,7 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Film, Upload, Trash2 } from "lucide-react";
 import { Card } from "../components/UI";
-import type { SkillVideo, SkillCategory } from "../data/skills";
+import {
+  MAX_SKILL_VIDEO_BYTES,
+  type SkillVideo,
+  type SkillCategory,
+} from "../data/skills";
 import { controlApi, ControlError } from "./api";
 type ManagedVideo = SkillVideo & { published: boolean; size: number };
 export function SkillsManager({
@@ -64,10 +68,10 @@ export function SkillsManager({
     if (
       !["video/mp4", "video/webm"].includes(mime) ||
       file.size < 16 ||
-      file.size > 50 * 1024 * 1024
+      file.size > MAX_SKILL_VIDEO_BYTES
     ) {
       setError(
-        "Choose an MP4 or WebM video up to 50 MB. Export phone videos as MP4 first.",
+        "Choose an MP4 or WebM video up to 100 MB. Export phone videos as MP4 first.",
       );
       return;
     }
@@ -219,7 +223,7 @@ export function SkillsManager({
             />
           </label>
           <p className="small muted">
-            MP4 or WebM, up to 50 MB. MP4 with H.264 video and AAC audio gives
+            MP4 or WebM, up to 100 MB. MP4 with H.264 video and AAC audio gives
             the widest phone support.
           </p>
           {busy && xhr.current && (

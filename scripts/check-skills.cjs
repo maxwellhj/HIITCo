@@ -143,7 +143,8 @@ const { join, resolve } = require("node:path");
       401,
     );
     assert.equal(
-      (await upload(bytes, { origin: "https://other.test" })).status,
+      (await upload(bytes.subarray(0, 16), { origin: "https://other.test" }))
+        .status,
       403,
     );
     assert.equal(
@@ -152,10 +153,10 @@ const { join, resolve } = require("node:path");
     );
     assert.equal(
       (
-        await upload(bytes, {
+        await upload(bytes.subarray(0, 16), {
           headers: {
             "Content-Type": "video/mp4",
-            "X-Video-Size": String(51 * 1024 * 1024),
+            "X-Video-Size": String(101 * 1024 * 1024),
           },
         })
       ).status,
@@ -240,8 +241,27 @@ const { join, resolve } = require("node:path");
     await json("/api/control/skills/remove", { id });
     assert.deepEqual((await getJson("/api/control/skills")).videos, []);
     assert.equal((await call(preview)).status, 404);
+    const larger = Buffer.alloc(51 * 1024 * 1024, 7);
+    larger.write("ftyp", 4);
+    const largeUpload = await upload(larger, {
+      headers: {
+        "Content-Type": "video/mp4",
+        "X-Video-Size": String(larger.length),
+      },
+    });
+    assert.equal(largeUpload.status, 200, await largeUpload.clone().text());
+    const largeId = (await largeUpload.json()).id;
+    const tail = await call("/api/control/skills/video/" + largeId, {
+      headers: { Range: "bytes=-32" },
+    });
+    assert.equal(tail.status, 206);
+    assert.deepEqual(
+      Buffer.from(await tail.arrayBuffer()),
+      larger.subarray(larger.length - 32),
+    );
+    await json("/api/control/skills/remove", { id: largeId });
     console.log(
-      "PASS Skills Library Worker/SQLite: upload validation, public video management with member-data isolation, drafts/publishing/unpublishing/removal, chunked media bytes, seeking/ranges/HEAD, and persistence across restarts.",
+      "PASS Skills Library Worker/SQLite: upload validation including a real 51 MB file, public video management with member-data isolation, drafts/publishing/unpublishing/removal, chunked media bytes, seeking/ranges/HEAD, and persistence across restarts.",
     );
   } finally {
     await mf.dispose();
