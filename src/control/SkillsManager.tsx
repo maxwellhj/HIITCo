@@ -7,6 +7,26 @@ import {
   type SkillCategory,
 } from "../data/skills";
 import { controlApi, ControlError } from "./api";
+function encodeThumbnail(
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+) {
+  const scale = Math.min(1, 1280 / width, 720 / height),
+    canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const context = canvas.getContext("2d");
+  if (!context) throw Error("Couldn’t prepare this thumbnail.");
+  context.fillStyle = "#f0f2f4";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  for (const quality of [0.85, 0.7, 0.5, 0.35]) {
+    const image = canvas.toDataURL("image/jpeg", quality).split(",")[1];
+    if (image.length <= 349520) return image;
+  }
+  throw Error("This frame is too detailed. Try another frame.");
+}
 async function thumbnailImage(file: File) {
   if (
     !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
@@ -15,20 +35,7 @@ async function thumbnailImage(file: File) {
     throw Error("Choose a JPG, PNG or WebP image up to 15 MB.");
   const bitmap = await createImageBitmap(file);
   try {
-    const scale = Math.min(1, 1280 / bitmap.width, 720 / bitmap.height),
-      canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-    const context = canvas.getContext("2d");
-    if (!context) throw Error("Couldn’t prepare this image.");
-    context.fillStyle = "#f0f2f4";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    for (const quality of [0.85, 0.7, 0.5, 0.35]) {
-      const image = canvas.toDataURL("image/jpeg", quality).split(",")[1];
-      if (image.length <= 349520) return image;
-    }
-    throw Error("This image is too detailed. Choose a smaller image.");
+    return encodeThumbnail(bitmap, bitmap.width, bitmap.height);
   } finally {
     bitmap.close();
   }
@@ -53,6 +60,7 @@ export function SkillsManager({
     [message, setMessage] = useState(""),
     [removing, setRemoving] = useState<string | null>(null),
     [loading, setLoading] = useState(false);
+  const players = useRef<Record<string, HTMLVideoElement | null>>({});
   const xhr = useRef<XMLHttpRequest | null>(null),
     input = useRef<HTMLInputElement | null>(null),
     alive = useRef(true);
@@ -218,6 +226,46 @@ export function SkillsManager({
       if (alive.current) setBusy(false);
     }
   }
+  async function captureFrame(video: ManagedVideo) {
+    const player = players.current[video.id];
+    if (
+      !player ||
+      player.readyState < 2 ||
+      !player.videoWidth ||
+      player.seeking
+    ) {
+      setError(
+        "Play or scrub the video to your chosen frame, then pause it before saving.",
+      );
+      return;
+    }
+    player.pause();
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const image = encodeThumbnail(
+        player,
+        player.videoWidth,
+        player.videoHeight,
+      );
+      await controlApi("skills/thumbnail", {
+        id: video.id,
+        image,
+        mime: "image/jpeg",
+      });
+      if (!alive.current) return;
+      await load();
+      setMessage("Video frame saved as the thumbnail.");
+    } catch {
+      if (alive.current)
+        setError(
+          "Couldn’t capture this frame. Play the video, pause on a frame and try again.",
+        );
+    } finally {
+      if (alive.current) setBusy(false);
+    }
+  }
   const filtered =
     filter === "All"
       ? videos
@@ -372,6 +420,9 @@ export function SkillsManager({
                   </span>
                 </div>
                 <video
+                  ref={(player) => {
+                    players.current[v.id] = player;
+                  }}
                   controls
                   playsInline
                   preload="none"
@@ -382,9 +433,20 @@ export function SkillsManager({
                     "/api/control/",
                   )}
                 />
+                <p className="small muted">
+                  Play or scrub the video, pause on the frame you want, then
+                  save it as the thumbnail.
+                </p>
                 <div className="control-thumbnail-actions">
+                  <button
+                    className="secondary"
+                    disabled={busy}
+                    onClick={() => void captureFrame(v)}
+                  >
+                    Use this frame as thumbnail
+                  </button>
                   <label className="secondary control-thumbnail-picker">
-                    {v.posterUrl ? "Change thumbnail" : "Choose thumbnail"}
+                    Upload image instead
                     <input
                       type="file"
                       accept="image/jpeg,image/png,image/webp"

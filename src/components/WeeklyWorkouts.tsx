@@ -59,6 +59,18 @@ export function WeeklyWorkouts({
     }
     return () => controller.abort();
   }, [week, published, retry]);
+  useEffect(() => {
+    if (!published) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") setRetry((n) => n + 1);
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [published]);
   const detailId = useId();
   const [selected, setSelected] = useState<string | null>(() => {
     const day = new Date(dateKey(new Date()) + "T12:00:00Z").getUTCDay();
@@ -80,7 +92,16 @@ export function WeeklyWorkouts({
     <Card className="home-workouts">
       <div className="section-top">
         <h2>This week’s workout</h2>
-        {!published && <span className="pill">DEMO PLAN</span>}
+        {!published ? (
+          <span className="pill">DEMO PLAN</span>
+        ) : (
+          <button
+            className="text-button"
+            onClick={() => setRetry((n) => n + 1)}
+          >
+            Refresh workouts
+          </button>
+        )}
       </div>
       {published && (
         <p className="small muted workout-week-label">
@@ -136,7 +157,7 @@ export function WeeklyWorkouts({
           </h3>
           {published && entry?.workout && (
             <p className="small muted">
-              {entry.workout.block} · Week {entry.workout.programWeek} ·
+              {entry.workout.block} · Program week {entry.workout.programWeek} ·
               Published workout
             </p>
           )}

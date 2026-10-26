@@ -60,3 +60,7 @@ Create an event with a title, description and NZ calendar date. Time and booking
 Club settings and event management are available without staff network setup, matching public Skills Library management. Anyone with the Control Room link can change this club content. Member records, reports and sticker assignments keep their separate access checks. Events and the target are encrypted in the existing ControlStore; no new binding or secret is needed. Live member calendars use saved content only; sample events remain confined to the explicit fictional demo.
 
 Run `npm run test:club` for the real Worker/SQLite checks covering target validation, event create/edit/remove, optional fields, safe links, session/origin checks and persistence across restarts.
+
+To use the uploaded video itself as the thumbnail, play it in the Control Room, pause or scrub to the desired moment, then select **Use this frame as thumbnail**. The browser captures that exact frame and saves it through the existing thumbnail endpoint; no separate image file is required. **Upload image instead** remains available as an alternative. The saved frame is used in the member library too.
+
+Published workouts refresh when the app becomes visible or regains focus. Members can also select **Refresh workouts** without reloading the page. Calendar dates continue to use the NZ week and validated builder feed; **Program week** is labelled separately from the calendar week beginning. These changes do not alter the builder's schedule or publish a different plan.
