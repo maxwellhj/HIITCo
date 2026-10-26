@@ -22,6 +22,7 @@ const stickerId = (value: unknown): value is string =>
 export class ControlStore {
   constructor(private state: State) {
     for (const sql of [
+      "CREATE TABLE IF NOT EXISTS event_responses (member_key TEXT NOT NULL,event_id TEXT NOT NULL,sealed TEXT NOT NULL,PRIMARY KEY(member_key,event_id))",
       "CREATE TABLE IF NOT EXISTS member_targets (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS members (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS stickers (id TEXT PRIMARY KEY,sealed TEXT NOT NULL,art TEXT NOT NULL,mime TEXT NOT NULL)",
@@ -41,6 +42,29 @@ export class ControlStore {
       sql = this.state.storage.sql;
     try {
       if (request.method === "GET") {
+        if (
+          url.pathname === "/event-responses" ||
+          url.pathname === "/member-events"
+        ) {
+          const id = url.searchParams.get("memberKey");
+          if (!key(id)) throw Error();
+          return apiJson({
+            rows:
+              url.pathname === "/event-responses"
+                ? sql
+                    .exec(
+                      "SELECT r.event_id,r.sealed FROM event_responses r JOIN club_events e ON e.id=r.event_id WHERE r.member_key=?",
+                      id,
+                    )
+                    .toArray()
+                : sql
+                    .exec(
+                      "SELECT e.id AS event_id,e.sealed AS event_sealed,r.sealed AS response_sealed FROM club_events e LEFT JOIN event_responses r ON r.event_id=e.id AND r.member_key=? LIMIT 500",
+                      id,
+                    )
+                    .toArray(),
+          });
+        }
         if (url.pathname === "/member-target") {
           const id = url.searchParams.get("id");
           if (!key(id)) throw Error();
@@ -163,6 +187,28 @@ export class ControlStore {
       if (request.method !== "POST")
         return apiJson({ error: "method_not_allowed" }, 405);
       const body = JSON.parse(await limitedText(request.body, 1100000));
+      if (url.pathname === "/event-response") {
+        if (
+          !key(body.memberKey) ||
+          !stickerId(body.eventId) ||
+          typeof body.sealed !== "string" ||
+          body.sealed.length > 2000
+        )
+          throw Error();
+        if (
+          !sql
+            .exec("SELECT id FROM club_events WHERE id=?", body.eventId)
+            .toArray().length
+        )
+          return apiJson({ error: "not_found" }, 404);
+        sql.exec(
+          "INSERT INTO event_responses(member_key,event_id,sealed) VALUES(?,?,?) ON CONFLICT(member_key,event_id) DO UPDATE SET sealed=excluded.sealed",
+          body.memberKey,
+          body.eventId,
+          body.sealed,
+        );
+        return apiJson({ saved: true });
+      }
       if (url.pathname === "/member-target") {
         if (
           !key(body.memberKey) ||
@@ -209,7 +255,10 @@ export class ControlStore {
       ) {
         if (!stickerId(body.id)) throw Error();
         if (url.pathname === "/club-event-remove")
-          sql.exec("DELETE FROM club_events WHERE id=?", body.id);
+          this.state.storage.transactionSync(() => {
+            sql.exec("DELETE FROM club_events WHERE id=?", body.id);
+            sql.exec("DELETE FROM event_responses WHERE event_id=?", body.id);
+          });
         else {
           if (typeof body.sealed !== "string" || body.sealed.length > 32000)
             throw Error();

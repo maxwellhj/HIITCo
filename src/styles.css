@@ -3196,3 +3196,21 @@ td > svg {
 .control-goal-toggle:hover {color:#195c90;}
 .control-goal-toggle:focus-visible {outline:2px solid #558eb9;outline-offset:5px;border-radius:4px;}
 .control-goal-editor {margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
+
+.control-club-layout {grid-template-columns:minmax(0,1fr);}
+.event-rsvp {margin-top:20px;padding-top:16px;border-top:1px solid var(--border);}
+.event-rsvp h4 {margin:0 0 10px;}
+.event-rsvp-options {display:flex;gap:8px;flex-wrap:wrap;}
+.event-rsvp-options button {padding:10px 14px;border:1px solid var(--border);border-radius:9px;background:#fff;font-size:13px;}
+.event-rsvp-options button[aria-pressed=true] {border-color:#96bfe1;background:#edf5fb;color:#195c90;}
+.event-rsvp-options button.going[aria-pressed=true] {background:#eaf4ed;border-color:#a5cbb0;color:#315e3e;}
+.event-rsvp-options button.cant_attend[aria-pressed=true] {background:#f9eeee;border-color:#e2bcbc;color:#854848;}
+.control-member-event {display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid var(--border);}
+.control-member-event:last-child {border-bottom:0;}
+.control-member-event > div {min-width:0;}
+.control-member-event strong {font-size:13px;overflow-wrap:anywhere;}
+.control-member-event small {display:block;margin-top:6px;color:var(--muted);font-size:11px;}
+.event-response-badge {font-size:11px;padding:6px 10px;border-radius:16px;white-space:nowrap;background:#f0f2f4;color:var(--muted);}
+.event-response-badge.going {background:#eaf4ed;color:#315e3e;}
+.event-response-badge.maybe {background:#fbf1df;color:#795a27;}
+.event-response-badge.cant_attend {background:#f9eeee;color:#854848;}

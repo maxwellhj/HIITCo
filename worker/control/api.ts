@@ -1,3 +1,4 @@
+import { memberEventResponses } from "./eventResponses";
 import { weeklyGoal } from "./weeklyGoal";
 import { apiJson, limitedText } from "../gymmaster/auth";
 import { readSession, clearSessionCookie } from "../gymmaster/session";
@@ -142,13 +143,15 @@ export async function controlApi(
         if (!isKey(id)) return apiJson({ error: "invalid_request" }, 400);
         const member = await getAppMember(env, id);
         if (!member) return apiJson({ error: "not_found" }, 404);
-        const [training, chow, awards] = await Promise.all([
+        const [training, chow, awards, eventResponses] = await Promise.all([
           getRecord(env, id, "training"),
           getRecord(env, id, "chow"),
           controlData(env, "/awards?id=" + id),
+          memberEventResponses(env, id),
         ]);
         return apiJson({
           member,
+          eventResponses,
           ...(await weeklyGoal(env, id)),
           training: training
             ? parseTrainingLog(training, dateKey(new Date()))

@@ -1,3 +1,7 @@
+import {
+  eventResponseLabels,
+  type EventResponseStatus,
+} from "../domain/events";
 import { ClubManager } from "./ClubManager";
 import { SkillsManager } from "./SkillsManager";
 import { useEffect, useId, useRef, useState } from "react";
@@ -31,6 +35,14 @@ const name = (member: AppMember) =>
 const number = (value: number) =>
   value.toLocaleString("en-NZ", { maximumFractionDigits: 2 });
 type Detail = {
+  eventResponses: {
+    eventId: string;
+    title: string;
+    date: string;
+    time: string;
+    status: EventResponseStatus | null;
+    updatedAt: string | null;
+  }[];
   weeklyTarget: number;
   weeklyTargetOverride: number | null;
   clubWeeklyTarget: number;
@@ -220,7 +232,7 @@ export default function ControlRoom() {
               { id: "members", label: "Members", icon: Users },
               { id: "stickers", label: "Stickers", icon: Trophy },
               { id: "skills", label: "Skills Library", icon: Film },
-              { id: "club", label: "Club settings", icon: CalendarDays },
+              { id: "club", label: "Club events", icon: CalendarDays },
               { id: "activity", label: "Activity", icon: Bell },
               { id: "reports", label: "GymMaster reports", icon: Download },
             ] as const
@@ -692,6 +704,47 @@ function MemberInspector({
           onSaved={onChanged}
           onAccessError={onAccessError}
         />
+      </Card>
+      <Card>
+        <h2>Event responses</h2>
+        <p className="small muted">
+          This member’s plans for club events. A response does not complete an
+          external booking.
+        </p>
+        {(detail.eventResponses ?? []).filter(
+          (e) => e.date >= dateKey(new Date()) || e.status,
+        ).length ? (
+          (detail.eventResponses ?? [])
+            .filter((e) => e.date >= dateKey(new Date()) || e.status)
+            .map((event) => (
+              <div className="control-member-event" key={event.eventId}>
+                <div>
+                  <strong>{event.title}</strong>
+                  <small>
+                    {formatDate(event.date, {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                    {event.time ? ` · ${event.time} NZ time` : ""}
+                  </small>
+                </div>
+                <span
+                  className={
+                    "event-response-badge " + (event.status ?? "unanswered")
+                  }
+                >
+                  {event.status
+                    ? eventResponseLabels[event.status]
+                    : "No response"}
+                </span>
+              </div>
+            ))
+        ) : (
+          <p className="small muted">
+            No upcoming events or event responses yet.
+          </p>
+        )}
       </Card>
       <Card>
         <h2>Strength Metrics</h2>

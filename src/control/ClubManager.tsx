@@ -15,8 +15,7 @@ const blank = () => ({
   bring: "",
 });
 export function ClubManager() {
-  const [target, setTarget] = useState(3),
-    [data, setData] = useState<ClubContent | null>(null),
+  const [data, setData] = useState<ClubContent | null>(null),
     [form, setForm] = useState<ClubEvent>(blank),
     [editing, setEditing] = useState(false),
     [busy, setBusy] = useState(false),
@@ -28,11 +27,10 @@ export function ClubManager() {
       const next = await controlApi("club", undefined, signal);
       if (!signal?.aborted) {
         setData(next);
-        setTarget(next.weeklyTarget);
       }
     } catch {
       if (!signal?.aborted)
-        setError("Couldn’t load club settings. Please refresh.");
+        setError("Couldn’t load club events. Please refresh.");
     }
   }
   useEffect(() => {
@@ -58,43 +56,6 @@ export function ClubManager() {
   }
   return (
     <div className="control-club-layout">
-      <Card>
-        <h2>Weekly training target</h2>
-        <p className="small muted">
-          Set the club-wide goal shown in members’ weekly progress. Multiple
-          visits on one day count as one training day.
-        </p>
-        <form
-          className="control-form"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void save(
-              "target",
-              { weeklyTarget: target },
-              "Weekly training target saved.",
-            );
-          }}
-        >
-          <label>
-            Training days per week
-            <select
-              aria-label="Training days per week"
-              value={target}
-              disabled={busy || !data}
-              onChange={(e) => setTarget(Number(e.target.value))}
-            >
-              {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-                <option key={n} value={n}>
-                  {n} {n === 1 ? "day" : "days"}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button className="primary" disabled={busy || !data}>
-            Save weekly target
-          </button>
-        </form>
-      </Card>
       <Card>
         <h2>{editing ? "Edit club event" : "Add club event"}</h2>
         <p className="small muted">

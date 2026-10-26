@@ -51,13 +51,13 @@ The member app displays each video title above its clip. After uploading a video
 
 Use **All**, **Box**, **Lift** and **Sweat** subtabs to filter the Control Room catalogue. Counts include both drafts and published videos. Filtering does not change an existing video's category. After a new upload, the catalogue shows its selected category so the draft is easy to find.
 
-## Club settings: weekly target and events
+## Club events
 
-Open **Club settings** in the Control Room to set the club-wide weekly training-days target, from 1 to 7 days. The default is 3 until saved. Members see the target in their home-screen weekly-goal panel. It counts distinct confirmed training dates in the current Monday–Sunday NZ week, combining GymMaster daily counts and received check-ins; multiple visits on a day count once. Missing dates remain unknown, and weekly streaks retain their existing attended-week definition.
+Open **Club events** in the Control Room to manage calendar content. The weekly-target panel has been removed from this section; individual goals are edited under Members. Existing saved goals and the club fallback are preserved. Members’ goals still count distinct confirmed NZ training dates, and weekly streak definitions are unchanged.
 
 Create an event with a title, description and NZ calendar date. Time and booking URL are optional. Saved events appear immediately in the backend feed and update in the member calendar and home-screen upcoming-event card on opening/refresh, return to the app, or the 30-second visible refresh. The calendar marks event dates and offers **Book this event** when a URL is provided. Blank times display **No set time**. Edit existing events without duplicating them, or remove them with confirmation. Dates are stored as NZ date-only strings and times as NZ wall times. Booking URLs allow HTTP/HTTPS only, without embedded credentials. The initial event limit is 500; this calendar does not import GymMaster bookings.
 
-Club settings and event management are available without staff network setup, matching public Skills Library management. Anyone with the Control Room link can change this club content. Member records, reports and sticker assignments keep their separate access checks. Events and the target are encrypted in the existing ControlStore; no new binding or secret is needed. Live member calendars use saved content only; sample events remain confined to the explicit fictional demo.
+Club event management is available without staff network setup, matching public Skills Library management. Anyone with the Control Room link can change this club content. Member records, reports and sticker assignments keep their separate access checks. Events and the target are encrypted in the existing ControlStore; no new binding or secret is needed. Live member calendars use saved content only; sample events remain confined to the explicit fictional demo.
 
 Run `npm run test:club` for the real Worker/SQLite checks covering target validation, event create/edit/remove, optional fields, safe links, session/origin checks and persistence across restarts.
 
@@ -72,3 +72,11 @@ In **Members**, select a member and click the **Training this week — X out of 
 Individual goals use the same protected member-management access as member records and sticker awards. The backend validates the member exists and stores the override encrypted under that member's private identifier. The member app resolves its own goal from the encrypted session, never from a client-supplied member ID. It refreshes while visible, on return, or on reopening Home. Existing training-day counting and streak definitions remain unchanged. No new binding or secret is required.
 
 Run `npm run test:member-goals` for the real Worker/SQLite integration checks covering separate member goals, protected writes, 1–7 validation, default inheritance/reset and persistence across restarts.
+
+### Event responses
+
+Members can choose **Going**, **Maybe** or **Can’t attend** on a calendar event and change their response later. One encrypted response is stored per member/event using the authenticated member session identity. Member app feeds include only that member’s responses; public event-management feeds never include responses or attendee names.
+
+Under **Members**, select a member and open **Event responses** to see upcoming events with **Going**, **Maybe**, **Can’t attend** or **No response**. Past events with a saved response are also shown. The staff view uses the protected member-management API. Responses persist across app/server restarts and refresh with the member app feed and Control Room member details. Editing an event retains its responses; deleting it removes its responses. A Going response does not complete an external booking; members are prompted to follow the booking link when one is supplied.
+
+Run `npm run test:event-responses` for real Worker/SQLite checks covering the three choices, change-without-duplicates, member isolation, protected staff reads, public-feed privacy, input/session/origin checks, restart persistence and deletion cleanup.

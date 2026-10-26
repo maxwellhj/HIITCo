@@ -1,3 +1,4 @@
+import { ownEventResponses } from "./eventResponses";
 import { weeklyGoal } from "./weeklyGoal";
 import { apiJson, limitedText } from "../gymmaster/auth";
 import { readSession } from "../gymmaster/session";
@@ -70,8 +71,18 @@ export async function clubApi(
             ),
           )
         : null;
+      const eventResponses = memberSession
+        ? await ownEventResponses(
+            env,
+            await trainingMemberKey(
+              memberSession.memberId,
+              env.GYMMASTER_API_KEY,
+            ),
+          )
+        : undefined;
       return apiJson({
         weeklyTarget: goal?.weeklyTarget ?? setting?.weeklyTarget ?? 3,
+        ...(eventResponses ? { eventResponses } : {}),
         events: events.sort(
           (a, b) =>
             a.date.localeCompare(b.date) ||

@@ -1,3 +1,4 @@
+import type { EventResponseStatus } from "../domain/events";
 import { useCallback, useEffect, useState } from "react";
 import type { ClubContent } from "../domain/club";
 export function useClubContent(enabled = true) {
@@ -52,5 +53,39 @@ export function useClubContent(enabled = true) {
       document.removeEventListener("visibilitychange", visible);
     };
   }, [enabled, attempt]);
-  return { data, error, reload };
+  const respond = useCallback(
+    async (eventId: string, status: EventResponseStatus) => {
+      const response = await fetch("/api/gymmaster/event-response", {
+        method: "POST",
+        credentials: "same-origin",
+        cache: "no-store",
+        redirect: "error",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId, status }),
+      });
+      if (!response.ok) throw Error();
+      const result = await response.json();
+      if (
+        result.response?.eventId !== eventId ||
+        result.response?.status !== status
+      )
+        throw Error();
+      setData((old) =>
+        old
+          ? {
+              ...old,
+              eventResponses: [
+                ...(old.eventResponses ?? []).filter(
+                  (r) => r.eventId !== eventId,
+                ),
+                result.response,
+              ],
+            }
+          : old,
+      );
+      setAttempt((v) => v + 1);
+    },
+    [],
+  );
+  return { data, error, reload, respond };
 }

@@ -38,3 +38,15 @@ export function upcomingEvents(
     .filter((e) => e.date >= today)
     .sort((a, b) => a.date.localeCompare(b.date));
 }
+
+export type EventResponseStatus = "going" | "maybe" | "cant_attend";
+export interface EventResponse {
+  eventId: string;
+  status: EventResponseStatus;
+  updatedAt: string;
+}
+export const eventResponseLabels: Record<EventResponseStatus, string> = {
+  going: "Going",
+  maybe: "Maybe",
+  cant_attend: "Can’t attend",
+};

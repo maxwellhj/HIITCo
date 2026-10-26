@@ -1,11 +1,12 @@
 import { validDate } from "./training";
 import { weekKey } from "./attendance";
-import type { ClubEvent } from "./events";
+import type { ClubEvent, EventResponse } from "./events";
 import type { DailyVisits } from "./gymmasterVisits";
 import type { MemberCheckin } from "./checkinTimes";
 export interface ClubContent {
   weeklyTarget: number;
   events: ClubEvent[];
+  eventResponses?: EventResponse[];
 }
 export function parseClubEvent(value: unknown): ClubEvent {
   if (!value || typeof value !== "object") throw Error("Invalid event");
