@@ -28,6 +28,7 @@ export class ControlStore {
       "CREATE TABLE IF NOT EXISTS snapshots (member_key TEXT NOT NULL,kind TEXT NOT NULL,revision INTEGER NOT NULL,sealed TEXT NOT NULL,PRIMARY KEY(member_key,kind))",
       "CREATE TABLE IF NOT EXISTS audit (id TEXT PRIMARY KEY,member_key TEXT NOT NULL,sealed TEXT NOT NULL,created_at TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS activity_read (id TEXT PRIMARY KEY)",
+      "CREATE TABLE IF NOT EXISTS skill_posters (id TEXT PRIMARY KEY,version TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS skills (id TEXT PRIMARY KEY,sealed TEXT NOT NULL,published INTEGER NOT NULL DEFAULT 0)",
       "CREATE TABLE IF NOT EXISTS settings (id TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
     ])
@@ -42,7 +43,7 @@ export class ControlStore {
           return apiJson({
             rows: sql
               .exec(
-                "SELECT id,sealed,published FROM skills ORDER BY rowid DESC LIMIT 200",
+                "SELECT s.id,s.sealed,s.published,p.version AS poster_version FROM skills s LEFT JOIN skill_posters p ON p.id=s.id ORDER BY s.rowid DESC LIMIT 200",
               )
               .toArray(),
           });
@@ -129,6 +130,29 @@ export class ControlStore {
       if (request.method !== "POST")
         return apiJson({ error: "method_not_allowed" }, 405);
       const body = JSON.parse(await limitedText(request.body, 1100000));
+      if (url.pathname === "/skill-poster") {
+        if (
+          !stickerId(body.id) ||
+          !(typeof body.version === "string" || body.version === null)
+        )
+          throw Error();
+        if (
+          !sql.exec("SELECT id FROM skills WHERE id=?", body.id).toArray()
+            .length
+        )
+          return apiJson({ error: "not_found" }, 404);
+        if (body.version === null)
+          sql.exec("DELETE FROM skill_posters WHERE id=?", body.id);
+        else {
+          if (body.version.length > 80) throw Error();
+          sql.exec(
+            "INSERT INTO skill_posters(id,version) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET version=excluded.version",
+            body.id,
+            body.version,
+          );
+        }
+        return apiJson({ saved: true });
+      }
       if (
         ["/skill", "/skill-publish", "/skill-remove"].includes(url.pathname)
       ) {
@@ -154,7 +178,11 @@ export class ControlStore {
             body.published ? 1 : 0,
             body.id,
           );
-        } else sql.exec("DELETE FROM skills WHERE id=?", body.id);
+        } else
+          this.state.storage.transactionSync(() => {
+            sql.exec("DELETE FROM skills WHERE id=?", body.id);
+            sql.exec("DELETE FROM skill_posters WHERE id=?", body.id);
+          });
         return apiJson({ saved: true });
       }
       if (url.pathname === "/setting") {

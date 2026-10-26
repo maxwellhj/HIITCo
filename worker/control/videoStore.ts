@@ -20,6 +20,9 @@ export class SkillVideoStore {
   }
   private tables() {
     this.state.storage.sql.exec(
+      "CREATE TABLE IF NOT EXISTS thumbnail (id INTEGER PRIMARY KEY CHECK(id=1),mime TEXT NOT NULL,data BLOB NOT NULL)",
+    );
+    this.state.storage.sql.exec(
       "CREATE TABLE IF NOT EXISTS chunks (idx INTEGER PRIMARY KEY,data BLOB NOT NULL)",
     );
     this.state.storage.sql.exec(
@@ -42,6 +45,44 @@ export class SkillVideoStore {
       await this.state.storage.deleteAll();
       this.tables();
       return apiJson({ saved: true });
+    }
+    if (path === "/thumbnail") {
+      if (request.method === "POST") {
+        const mime = request.headers.get("Content-Type");
+        if (mime === "application/x-remove-thumbnail") {
+          sql.exec("DELETE FROM thumbnail WHERE id=1");
+          return apiJson({ saved: true });
+        }
+        if (!["image/jpeg", "image/png", "image/webp"].includes(mime ?? ""))
+          return apiJson({ error: "invalid_image" }, 400);
+        const data = await request.arrayBuffer();
+        if (data.byteLength > 262144 || data.byteLength < 12)
+          return apiJson({ error: "invalid_image" }, 400);
+        sql.exec(
+          "INSERT INTO thumbnail(id,mime,data) VALUES(1,?,?) ON CONFLICT(id) DO UPDATE SET mime=excluded.mime,data=excluded.data",
+          mime,
+          data,
+        );
+        return apiJson({ saved: true });
+      }
+      if (["GET", "HEAD"].includes(request.method)) {
+        const row = sql
+          .exec<{ mime: string; data: ArrayBuffer }>(
+            "SELECT mime,data FROM thumbnail WHERE id=1",
+          )
+          .toArray()[0];
+        if (!row) return apiJson({ error: "not_found" }, 404);
+        return new Response(request.method === "HEAD" ? null : row.data, {
+          headers: {
+            "Content-Type": row.mime,
+            "Content-Length": String(row.data.byteLength),
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Cross-Origin-Resource-Policy": "same-origin",
+          },
+        });
+      }
+      return apiJson({ error: "method_not_allowed" }, 405);
     }
     if (path === "/upload" && request.method === "POST") {
       if (sql.exec("SELECT id FROM info").toArray().length)

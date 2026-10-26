@@ -182,11 +182,61 @@ const { join, resolve } = require("node:path");
       Buffer.from(await (await call(preview)).arrayBuffer()),
       bytes,
     );
+    const thumbnail =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==";
+    const poster = "/api/gymmaster/skills/thumbnail/" + id,
+      adminPoster = "/api/control/skills/thumbnail/" + id;
+    await json("/api/control/skills/thumbnail", {
+      id,
+      mime: "image/png",
+      image: thumbnail,
+    });
+    const firstPoster = (await getJson("/api/control/skills")).videos[0]
+      .posterUrl;
+    assert(firstPoster.startsWith(poster + "?v="));
+    assert.equal((await call(poster)).status, 401);
+    assert.equal((await call(poster, { member: true })).status, 404);
+    assert.equal(
+      (await call(adminPoster)).headers.get("Content-Type"),
+      "image/png",
+    );
+    assert.equal(
+      Buffer.from(await (await call(adminPoster)).arrayBuffer()).toString(
+        "base64",
+      ),
+      thumbnail,
+    );
+    const invalid = await call("/api/control/skills/thumbnail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id,
+        mime: "image/svg+xml",
+        image: Buffer.from("<svg>bad</svg>").toString("base64"),
+      }),
+    });
+    assert.equal(invalid.status, 400);
+    await json("/api/control/skills/thumbnail", {
+      id,
+      mime: "image/png",
+      image: thumbnail,
+    });
+    assert.notEqual(
+      (await getJson("/api/control/skills")).videos[0].posterUrl,
+      firstPoster,
+    );
     await json("/api/control/skills/publish", { id, published: true });
     const library = (await getJson("/api/gymmaster/skills", { member: true }))
       .videos;
     assert.equal(library.length, 1);
     assert.equal(library[0].videoUrl, media);
+    assert(library[0].posterUrl.startsWith(poster + "?v="));
+    assert.equal(
+      Buffer.from(
+        await (await call(poster, { member: true })).arrayBuffer(),
+      ).toString("base64"),
+      thumbnail,
+    );
     assert.equal((await call(media)).status, 401);
     const full = await call(media, { member: true });
     assert.equal(full.headers.get("Content-Type"), "video/mp4");
@@ -236,11 +286,32 @@ const { join, resolve } = require("node:path");
       ),
       bytes.subarray(0, 16),
     );
+    assert.equal(
+      Buffer.from(
+        await (await call(poster, { member: true })).arrayBuffer(),
+      ).toString("base64"),
+      thumbnail,
+      "thumbnail survives restart",
+    );
+    await json("/api/control/skills/thumbnail", { id, image: null });
+    assert.equal(
+      (await getJson("/api/gymmaster/skills", { member: true })).videos[0]
+        .posterUrl,
+      undefined,
+    );
+    assert.equal((await call(poster, { member: true })).status, 404);
+    await json("/api/control/skills/thumbnail", {
+      id,
+      mime: "image/png",
+      image: thumbnail,
+    });
     await json("/api/control/skills/publish", { id, published: false });
     assert.equal((await call(media, { member: true })).status, 404);
+    assert.equal((await call(poster, { member: true })).status, 404);
     await json("/api/control/skills/remove", { id });
     assert.deepEqual((await getJson("/api/control/skills")).videos, []);
     assert.equal((await call(preview)).status, 404);
+    assert.equal((await call(adminPoster)).status, 404);
     const larger = Buffer.alloc(51 * 1024 * 1024, 7);
     larger.write("ftyp", 4);
     const largeUpload = await upload(larger, {
@@ -261,7 +332,7 @@ const { join, resolve } = require("node:path");
     );
     await json("/api/control/skills/remove", { id: largeId });
     console.log(
-      "PASS Skills Library Worker/SQLite: upload validation including a real 51 MB file, public video management with member-data isolation, drafts/publishing/unpublishing/removal, chunked media bytes, seeking/ranges/HEAD, and persistence across restarts.",
+      "PASS Skills Library Worker/SQLite: upload validation including a real 51 MB file, public video management with member-data isolation, drafts/publishing/unpublishing/removal, thumbnail save/replace/remove and draft isolation, chunked media bytes, seeking/ranges/HEAD, and persistence across restarts.",
     );
   } finally {
     await mf.dispose();

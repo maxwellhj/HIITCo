@@ -3161,3 +3161,14 @@ td > svg {
 .control-video-confirm {padding:14px;background:#f5f7f9;border-radius:12px;}
 .control-video-confirm p {width:100%;margin:0;}
 @media(max-width:850px) {.control-skills-layout {grid-template-columns:minmax(0,1fr);}}
+
+.skill-video h3 { margin:0 0 12px; }
+.control-skills-subtabs {display:flex;gap:8px;flex-wrap:wrap;margin-top:18px;}
+.control-skills-subtabs button {display:flex;align-items:center;gap:8px;padding:9px 13px;border:1px solid var(--line);border-radius:10px;background:white;}
+.control-skills-subtabs button[aria-pressed=true] {background:#edf5fb;border-color:#96bfdf;color:#195c90;}
+.control-skills-subtabs span {font-size:11px;opacity:.7;}
+.control-thumbnail-actions {display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;}
+.control-thumbnail-picker {position:relative;display:inline-flex;cursor:pointer;overflow:hidden;}
+.control-thumbnail-picker input {position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.control-thumbnail-picker:focus-within {outline:2px solid #558eb9;outline-offset:3px;}
+.control-thumbnail-actions small {flex-basis:100%;font-size:12px;}

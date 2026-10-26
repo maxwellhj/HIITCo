@@ -1,4 +1,5 @@
-import { apiJson } from "../gymmaster/auth";
+import { validateArtwork } from "./api";
+import { apiJson, limitedText } from "../gymmaster/auth";
 import { readSession } from "../gymmaster/session";
 import { sealTraining, openTraining } from "../training";
 import type { ControlEnv } from "./access";
@@ -16,12 +17,20 @@ async function catalog(
   const result = await controlData(env, "/skills");
   return Promise.all(
     result.rows.map(
-      async (r: { id: string; sealed: string; published: number }) => ({
+      async (r: {
+        id: string;
+        sealed: string;
+        published: number;
+        poster_version?: string;
+      }) => ({
         ...(await openTraining(
           r.sealed,
           env.GYMMASTER_API_KEY!,
           "control.skill:" + r.id,
         )),
+        posterUrl: r.poster_version
+          ? "/api/gymmaster/skills/thumbnail/" + r.id + "?v=" + r.poster_version
+          : undefined,
         id: r.id,
         published: r.published === 1,
         videoUrl: "/api/gymmaster/skills/video/" + r.id,
@@ -78,6 +87,22 @@ export async function skillsApi(
       });
     }
     if (
+      path.startsWith(prefix + "/thumbnail/") &&
+      ["GET", "HEAD"].includes(request.method)
+    ) {
+      const id = path.slice((prefix + "/thumbnail/").length);
+      if (
+        !validId(id) ||
+        !(await catalog(env)).some((v) => v.id === id && (admin || v.published))
+      )
+        return apiJson({ error: "not_found" }, 404);
+      return await videoStore(env, id).fetch(
+        new Request("https://video.internal/thumbnail", {
+          method: request.method,
+        }),
+      );
+    }
+    if (
       path.startsWith(prefix + "/video/") &&
       ["GET", "HEAD"].includes(request.method)
     ) {
@@ -98,6 +123,40 @@ export async function skillsApi(
     }
     if (!admin || request.method !== "POST")
       return apiJson({ error: "method_not_allowed" }, 405);
+    if (path === prefix + "/thumbnail") {
+      if (request.headers.get("Content-Type") !== "application/json")
+        return apiJson({ error: "invalid_request" }, 400);
+      const body = JSON.parse(await limitedText(request.body, 400000));
+      if (
+        typeof body.id !== "string" ||
+        !validId(body.id) ||
+        (body.image !== null && !validateArtwork(body.mime, body.image))
+      )
+        return apiJson({ error: "invalid_thumbnail" }, 400);
+      if (!(await catalog(env)).some((v) => v.id === body.id))
+        return apiJson({ error: "not_found" }, 404);
+      const response = await videoStore(env, body.id).fetch(
+        new Request("https://video.internal/thumbnail", {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              body.image === null
+                ? "application/x-remove-thumbnail"
+                : body.mime,
+          },
+          body:
+            body.image === null
+              ? undefined
+              : Uint8Array.from(atob(body.image), (c) => c.charCodeAt(0)),
+        }),
+      );
+      if (!response.ok) throw Error();
+      await controlData(env, "/skill-poster", {
+        id: body.id,
+        version: body.image === null ? null : crypto.randomUUID(),
+      });
+      return apiJson({ saved: true });
+    }
     if (path === prefix + "/upload") {
       const title = url.searchParams.get("title")?.trim() ?? "",
         description = url.searchParams.get("description")?.trim() ?? "",
@@ -152,7 +211,6 @@ export async function skillsApi(
     if (path === prefix + "/publish" || path === prefix + "/remove") {
       if (request.headers.get("Content-Type") !== "application/json")
         return apiJson({ error: "invalid_request" }, 400);
-      const { limitedText } = await import("../gymmaster/auth");
       const body = JSON.parse(await limitedText(request.body, 2000));
       if (typeof body.id !== "string" || !validId(body.id))
         return apiJson({ error: "invalid_request" }, 400);

@@ -7,6 +7,32 @@ import {
   type SkillCategory,
 } from "../data/skills";
 import { controlApi, ControlError } from "./api";
+async function thumbnailImage(file: File) {
+  if (
+    !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
+    file.size > 15 * 1024 * 1024
+  )
+    throw Error("Choose a JPG, PNG or WebP image up to 15 MB.");
+  const bitmap = await createImageBitmap(file);
+  try {
+    const scale = Math.min(1, 1280 / bitmap.width, 720 / bitmap.height),
+      canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext("2d");
+    if (!context) throw Error("Couldn’t prepare this image.");
+    context.fillStyle = "#f0f2f4";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    for (const quality of [0.85, 0.7, 0.5, 0.35]) {
+      const image = canvas.toDataURL("image/jpeg", quality).split(",")[1];
+      if (image.length <= 349520) return image;
+    }
+    throw Error("This image is too detailed. Choose a smaller image.");
+  } finally {
+    bitmap.close();
+  }
+}
 type ManagedVideo = SkillVideo & { published: boolean; size: number };
 export function SkillsManager({
   available,
@@ -16,6 +42,7 @@ export function SkillsManager({
   onAccessError: (error: unknown) => void;
 }) {
   const [videos, setVideos] = useState<ManagedVideo[]>([]),
+    [filter, setFilter] = useState<"All" | SkillCategory>("All"),
     [title, setTitle] = useState(""),
     [description, setDescription] = useState(""),
     [category, setCategory] = useState<SkillCategory>("Box"),
@@ -112,6 +139,7 @@ export function SkillsManager({
         request.send(file);
       });
       if (!alive.current) return;
+      setFilter(category);
       setTitle("");
       setDescription("");
       setFile(null);
@@ -160,6 +188,40 @@ export function SkillsManager({
       if (alive.current) setBusy(false);
     }
   }
+  async function chooseThumbnail(video: ManagedVideo, file: File | null) {
+    setBusy(true);
+    setError("");
+    setMessage("");
+    try {
+      const image = file ? await thumbnailImage(file) : null;
+      if (!alive.current) return;
+      await controlApi("skills/thumbnail", {
+        id: video.id,
+        image,
+        mime: "image/jpeg",
+      });
+      if (!alive.current) return;
+      await load();
+      setMessage(
+        file
+          ? "Thumbnail saved. Members will see it on this video."
+          : "Thumbnail removed.",
+      );
+    } catch (e) {
+      if (alive.current)
+        setError(
+          e instanceof Error && !(e instanceof ControlError)
+            ? e.message
+            : "Couldn’t save the thumbnail. Please try again.",
+        );
+    } finally {
+      if (alive.current) setBusy(false);
+    }
+  }
+  const filtered =
+    filter === "All"
+      ? videos
+      : videos.filter((video) => video.category === filter);
   return (
     <div className="control-skills-layout">
       <Card>
@@ -167,8 +229,8 @@ export function SkillsManager({
           <Upload size={20} /> Upload a skill video
         </h2>
         <p className="small muted">
-          Add your coaching videos here. Preview the draft, then publish it for
-          members.
+          Add your coaching videos here, then choose a thumbnail and preview the
+          draft before publishing.
         </p>
         {!available && (
           <p className="small" role="status">
@@ -266,30 +328,87 @@ export function SkillsManager({
           Published videos appear through the Skills Library button in the
           member app.
         </p>
+        <div
+          className="control-skills-subtabs"
+          role="group"
+          aria-label="Skill video categories"
+        >
+          {(["All", "Box", "Lift", "Sweat"] as const).map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={filter === c}
+              onClick={() => setFilter(c)}
+            >
+              {c}
+              <span>
+                {c === "All"
+                  ? videos.length
+                  : videos.filter((v) => v.category === c).length}
+              </span>
+            </button>
+          ))}
+        </div>
         {loading && !videos.length ? (
           <p role="status">Loading videos…</p>
-        ) : !videos.length ? (
+        ) : !filtered.length ? (
           <div className="control-empty">
             <Film size={32} />
-            <h3>No videos uploaded yet</h3>
+            <h3>
+              {filter === "All"
+                ? "No videos uploaded yet"
+                : `No ${filter} videos yet`}
+            </h3>
             <p>Your coaching library starts here.</p>
           </div>
         ) : (
           <div className="control-skill-list">
-            {videos.map((v) => (
+            {filtered.map((v) => (
               <article key={v.id} className="control-skill-video">
+                <div className="section-top">
+                  <h3>{v.title}</h3>
+                  <span className="control-video-status">
+                    {v.published ? "Published" : "Draft"}
+                  </span>
+                </div>
                 <video
                   controls
                   playsInline
                   preload="none"
                   aria-label={v.title}
                   src={"/api/control/skills/video/" + v.id}
+                  poster={v.posterUrl?.replace(
+                    "/api/gymmaster/",
+                    "/api/control/",
+                  )}
                 />
-                <div className="section-top">
-                  <h3>{v.title}</h3>
-                  <span className="control-video-status">
-                    {v.published ? "Published" : "Draft"}
-                  </span>
+                <div className="control-thumbnail-actions">
+                  <label className="secondary control-thumbnail-picker">
+                    {v.posterUrl ? "Change thumbnail" : "Choose thumbnail"}
+                    <input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      aria-label={"Choose thumbnail for " + v.title}
+                      disabled={busy}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (file) void chooseThumbnail(v, file);
+                      }}
+                    />
+                  </label>
+                  {v.posterUrl && (
+                    <button
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() => void chooseThumbnail(v, null)}
+                    >
+                      Remove thumbnail
+                    </button>
+                  )}
+                  <small className="muted">
+                    JPG, PNG or WebP. Images are resized automatically.
+                  </small>
                 </div>
                 <p className="small muted">
                   {v.category} · {(v.size / 1024 / 1024).toFixed(1)} MB

@@ -44,3 +44,9 @@ Uploads are saved as drafts. Preview the video, then select **Publish video** to
 Run `npm run test:skills` for the real Worker/SQLite integration check. It uses synthetic video-container bytes and fake member credentials to check publication, authentication, upload validation, range responses and persistence. Browser playback is additionally checked with a locally generated H.264 MP4, never with member data.
 
 The connection setup notice is hidden on every tab once Control Room access succeeds. Only an explicit `control_access_restricted` response can switch that access state off; unrelated rejected requests show their own error without displaying a staff-connection notice. Video upload validation uses the same 100 MB limit in the browser and backend.
+
+### Video thumbnails and category subtabs
+
+The member app displays each video title above its clip. After uploading a video, use **Choose thumbnail** on its Control Room card to select a JPG, PNG or WebP image (up to 15 MB). Images are resized automatically to fit within 1280 × 720 and compressed before saving. Use **Change thumbnail** or **Remove thumbnail** later without re-uploading the video. A 16:9 image fits the player best. Published thumbnails refresh with the member library; draft thumbnails are available through the public Control Room preview but not the member-facing endpoints. Images persist alongside each video, and removing a video removes its image too.
+
+Use **All**, **Box**, **Lift** and **Sweat** subtabs to filter the Control Room catalogue. Counts include both drafts and published videos. Filtering does not change an existing video's category. After a new upload, the catalogue shows its selected category so the draft is easy to find.

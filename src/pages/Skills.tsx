@@ -116,6 +116,7 @@ export function Skills({ demo = false }: { demo?: boolean }) {
           <div className="skills-video-list">
             {videos.map((video) => (
               <Card key={video.id} className="skill-video">
+                <h3>{video.title}</h3>
                 <video
                   key={video.videoUrl}
                   controls
@@ -136,7 +137,6 @@ export function Skills({ demo = false }: { demo?: boolean }) {
                   )}
                   Your browser does not support video playback.
                 </video>
-                <h3>{video.title}</h3>
                 <p>{video.description}</p>
               </Card>
             ))}
