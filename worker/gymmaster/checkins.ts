@@ -42,53 +42,73 @@ export async function gymMasterCheckins(
         "Retry-After": "60",
       });
     stage = "GM-CHECKINS-LOOKUP";
-    const memberKey = await memberCheckinIndex(
+    const { checkins, historyPending } = await readMemberCheckins(
+      env,
       session.memberId,
-      env.GYMMASTER_WEBHOOK_TOKEN,
+      (value) => {
+        stage = value;
+      },
     );
-    const through = dateKey(new Date()),
-      from = shiftDate(weekKey(through), -14);
-    const inbox = env.GYMMASTER_CHECKIN_INBOX.get(
-      env.GYMMASTER_CHECKIN_INBOX.idFromName("hiitco-checkin-inbox-v1"),
-    );
-    const response = await inbox.fetch(
-      new Request("https://inbox.internal/checkins/query", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberKey, from, through }),
-      }),
-    );
-    if (!response.ok) throw Error();
-    const value = (await response.json()) as {
-      records?: unknown;
-      historyPending?: unknown;
-    };
-    if (
-      !Array.isArray(value.records) ||
-      value.records.length > 1000 ||
-      value.records.some((record) => typeof record !== "string")
-    )
-      throw Error();
-    stage = "GM-CHECKINS-DECRYPT";
-    const records = await Promise.all(
-      value.records.map((record) =>
-        openCheckin(record, env.GYMMASTER_WEBHOOK_TOKEN!, memberKey),
-      ),
-    );
-    stage = "GM-CHECKINS-FORMAT";
-    const checkins = parseCheckinTimes(records);
-    if (checkins.some((record) => record.date < from || record.date > through))
-      throw Error();
     console.info("GM-CHECKINS-LOOKUP", {
       matched: checkins.length > 0,
-      historyPending: value.historyPending === true,
+      historyPending: historyPending,
     });
     return apiJson({
       checkins,
       timeZone: "Pacific/Auckland",
-      ...(value.historyPending === true ? { historyPending: true } : {}),
+      ...(historyPending ? { historyPending: true } : {}),
     });
   } catch {
     return unavailable(stage);
   }
+}
+
+/** Server-only lookup shared by the member app and authorised Control Room. */
+export async function readMemberCheckins(
+  env: WebhookEnv,
+  memberId: number,
+  onStage?: (stage: string) => void,
+) {
+  if (!env.GYMMASTER_WEBHOOK_TOKEN || !env.GYMMASTER_CHECKIN_INBOX)
+    throw Error("Check-ins unavailable");
+  const memberKey = await memberCheckinIndex(
+    memberId,
+    env.GYMMASTER_WEBHOOK_TOKEN,
+  );
+  const through = dateKey(new Date()),
+    from = shiftDate(weekKey(through), -14);
+  const inbox = env.GYMMASTER_CHECKIN_INBOX.get(
+    env.GYMMASTER_CHECKIN_INBOX.idFromName("hiitco-checkin-inbox-v1"),
+  );
+  const response = await inbox.fetch(
+    new Request("https://inbox.internal/checkins/query", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ memberKey, from, through }),
+    }),
+  );
+  if (!response.ok) throw Error();
+  const value = (await response.json()) as {
+    records?: unknown;
+    historyPending?: unknown;
+  };
+  if (
+    !Array.isArray(value.records) ||
+    value.records.length > 1000 ||
+    value.records.some((record) => typeof record !== "string")
+  )
+    throw Error();
+
+  onStage?.("GM-CHECKINS-DECRYPT");
+  const records = await Promise.all(
+    value.records.map((record) =>
+      openCheckin(record, env.GYMMASTER_WEBHOOK_TOKEN!, memberKey),
+    ),
+  );
+
+  onStage?.("GM-CHECKINS-FORMAT");
+  const checkins = parseCheckinTimes(records);
+  if (checkins.some((record) => record.date < from || record.date > through))
+    throw Error();
+  return { checkins, historyPending: value.historyPending === true };
 }

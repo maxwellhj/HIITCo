@@ -1,3 +1,5 @@
+import { controlData, type ControlDataEnv } from "../control/data";
+import { trainingMemberKey, sealTraining } from "../training";
 import { apiJson, limitedText, type AuthEnv } from "./auth";
 import { clearSessionCookie, readSession } from "./session";
 import { parseDailyVisits } from "../../src/domain/gymmasterVisits";
@@ -5,7 +7,7 @@ import { dateKey, shiftDate, weekKey } from "../../src/domain/attendance";
 import { memberStreak } from "../../src/member/attendance";
 export async function gymMasterVisits(
   request: Request,
-  env: AuthEnv,
+  env: AuthEnv & ControlDataEnv,
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (url.pathname !== "/api/gymmaster/visits") return null;
@@ -119,6 +121,28 @@ export async function gymMasterVisits(
         summary = memberStreak(rows, now);
       } catch {
         break;
+      }
+    }
+    if (env.CONTROL_STORE) {
+      try {
+        const memberKey = await trainingMemberKey(
+          session.memberId,
+          env.GYMMASTER_API_KEY!,
+        );
+        const updatedAt = now.toISOString();
+        const sealed = await sealTraining(
+          {
+            days: rows.filter((row) => row.date >= start && row.date <= today),
+            from: start,
+            through: today,
+            updatedAt,
+          },
+          env.GYMMASTER_API_KEY!,
+          "control.attendance:" + memberKey,
+        );
+        await controlData(env, "/attendance", { memberKey, sealed, updatedAt });
+      } catch {
+        console.error("GM-ATTENDANCE-SYNC");
       }
     }
     return apiJson({

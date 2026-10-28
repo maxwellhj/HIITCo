@@ -22,6 +22,7 @@ const stickerId = (value: unknown): value is string =>
 export class ControlStore {
   constructor(private state: State) {
     for (const sql of [
+      "CREATE TABLE IF NOT EXISTS attendance (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL,updated_at TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS event_responses (member_key TEXT NOT NULL,event_id TEXT NOT NULL,sealed TEXT NOT NULL,PRIMARY KEY(member_key,event_id))",
       "CREATE TABLE IF NOT EXISTS member_targets (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS members (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
@@ -42,6 +43,19 @@ export class ControlStore {
       sql = this.state.storage.sql;
     try {
       if (request.method === "GET") {
+        if (url.pathname === "/attendance") {
+          const id = url.searchParams.get("id");
+          if (!key(id)) throw Error();
+          return apiJson({
+            sealed:
+              sql
+                .exec<{ sealed: string }>(
+                  "SELECT sealed FROM attendance WHERE member_key=?",
+                  id,
+                )
+                .toArray()[0]?.sealed ?? null,
+          });
+        }
         if (
           url.pathname === "/event-responses" ||
           url.pathname === "/member-events"
@@ -187,6 +201,22 @@ export class ControlStore {
       if (request.method !== "POST")
         return apiJson({ error: "method_not_allowed" }, 405);
       const body = JSON.parse(await limitedText(request.body, 1100000));
+      if (url.pathname === "/attendance") {
+        if (
+          !key(body.memberKey) ||
+          typeof body.sealed !== "string" ||
+          body.sealed.length > 100000 ||
+          typeof body.updatedAt !== "string"
+        )
+          throw Error();
+        sql.exec(
+          "INSERT INTO attendance(member_key,sealed,updated_at) VALUES(?,?,?) ON CONFLICT(member_key) DO UPDATE SET sealed=excluded.sealed,updated_at=excluded.updated_at WHERE excluded.updated_at >= attendance.updated_at",
+          body.memberKey,
+          body.sealed,
+          body.updatedAt,
+        );
+        return apiJson({ saved: true });
+      }
       if (url.pathname === "/event-response") {
         if (
           !key(body.memberKey) ||

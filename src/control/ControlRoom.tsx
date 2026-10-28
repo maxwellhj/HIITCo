@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { Brand, Card } from "../components/UI";
 import { TrainingChart } from "../components/TrainingChart";
-import { dateKey, formatDate, shiftDate, weekKey } from "../domain/attendance";
+import { dateKey, formatDate, shiftDate } from "../domain/attendance";
 import {
   exerciseProgress,
   parseTrainingLog,
@@ -35,6 +35,12 @@ const name = (member: AppMember) =>
 const number = (value: number) =>
   value.toLocaleString("en-NZ", { maximumFractionDigits: 2 });
 type Detail = {
+  attendance: {
+    days: number | null;
+    updatedAt: string | null;
+    through: string | null;
+    from: string;
+  };
   eventResponses: {
     eventId: string;
     title: string;
@@ -460,13 +466,7 @@ function MemberGoal({
   onAccessError: (error: unknown) => void;
 }) {
   const editorId = useId();
-  const today = dateKey(new Date()),
-    monday = weekKey(today);
-  const completed = new Set(
-    detail.training.sessions
-      .filter((s) => s.date >= monday && s.date <= today)
-      .map((s) => s.date),
-  ).size;
+  const completed = detail.attendance?.days ?? null;
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(
       detail.weeklyTargetOverride === null
@@ -499,20 +499,29 @@ function MemberGoal({
         >
           <span>Training this week</span>
           <strong>
-            {completed}
+            {completed ?? "—"}
             <small>out of {detail.weeklyTarget}</small>
           </strong>
-          <small>Logged days · Edit goal {editing ? "▴" : "▾"}</small>
+          <small>Attendance · Edit goal {editing ? "▴" : "▾"}</small>
         </button>
         <span>
           CHOW attempts<strong>{detail.chow.scores.length}</strong>
         </span>
       </div>
+      <p className="small muted">
+        {detail.attendance?.updatedAt
+          ? `Attendance synced ${new Date(detail.attendance.updatedAt).toLocaleString("en-NZ", { timeZone: "Pacific/Auckland" })} NZ time. Newer received check-ins are included.`
+          : "Received check-ins are included. Full attendance syncs when this member refreshes attendance in their app."}
+        {completed === null
+          ? " Attendance is not available yet."
+          : " Missing records may mean this is a minimum count."}
+      </p>
       {editing && (
         <div id={editorId} className="control-goal-editor">
           <p className="small muted">
             Choose the weekly training-days goal for {detail.member.firstName}.
-            The counter shows distinct days in their training log this week.
+            The counter shows confirmed training days from GymMaster attendance
+            and received check-ins.
           </p>
           <form
             className="control-form"

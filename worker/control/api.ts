@@ -1,3 +1,4 @@
+import { controlAttendance } from "./attendance";
 import { memberEventResponses } from "./eventResponses";
 import { weeklyGoal } from "./weeklyGoal";
 import { apiJson, limitedText } from "../gymmaster/auth";
@@ -151,6 +152,7 @@ export async function controlApi(
         ]);
         return apiJson({
           member,
+          attendance: await controlAttendance(env, id, member.memberId),
           eventResponses,
           ...(await weeklyGoal(env, id)),
           training: training

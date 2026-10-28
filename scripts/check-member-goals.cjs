@@ -8,7 +8,7 @@ const { join, resolve } = require("node:path");
   const root = resolve(__dirname, "..");
   const { outputFiles } = await build({
     stdin: {
-      contents: `import app from ${JSON.stringify(join(root, "worker/index.ts"))};export * from ${JSON.stringify(join(root, "worker/index.ts"))};globalThis.fetch=async(url)=>{const u=new URL(url);if(u.pathname==="/portal/api/v1/member/profile"){const id=Number(u.searchParams.get("token").split("-").at(-1));return Response.json({result:{id,firstname:id===42?"Alex":"Jamie",surname:"Example",totalvisits:8},error:""});}throw Error("Unexpected test upstream");};export default {fetch(request,env){return app.fetch(request,{...env,LOGIN_RATE_LIMITER:{limit:async()=>({success:true})}})}};`,
+      contents: `import app from ${JSON.stringify(join(root, "worker/index.ts"))};export * from ${JSON.stringify(join(root, "worker/index.ts"))};globalThis.fetch=async(url)=>{const u=new URL(url);if(u.pathname==="/portal/api/v1/member/profile"){const id=Number(u.searchParams.get("token").split("-").at(-1));return Response.json({result:{id,firstname:id===42?"Alex":"Jamie",surname:"Example",totalvisits:8},error:""});}if(u.pathname==="/portal/api/v2/member/visits/daily"){const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Pacific/Auckland",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()); return Response.json({result:[{date:today,visits:2,watervisits:0,bookings:0}],error:""});}throw Error("Unexpected test upstream");};export default {fetch(request,env){return app.fetch(request,{...env,LOGIN_RATE_LIMITER:{limit:async()=>({success:true})}})}};`,
       resolveDir: root,
       loader: "ts",
     },
@@ -146,6 +146,20 @@ const { join, resolve } = require("node:path");
         .weeklyTarget,
       3,
     );
+    await getJson("/api/gymmaster/visits", { member: true, id: 42 });
+    const attendance = (await getJson("/api/control/member?id=" + a.memberKey))
+      .attendance;
+    assert.equal(
+      attendance.days,
+      1,
+      "two visits on one day count as one training day",
+    );
+    assert.ok(attendance.updatedAt);
+    assert.equal(
+      (await getJson("/api/control/member?id=" + b.memberKey)).attendance.days,
+      null,
+      "never use another member's attendance",
+    );
     let detail = await getJson("/api/control/member?id=" + a.memberKey);
     assert.equal(detail.weeklyTargetOverride, 5);
     assert.equal(detail.clubWeeklyTarget, 3);
@@ -223,6 +237,11 @@ const { join, resolve } = require("node:path");
       (await getJson("/api/gymmaster/club", { member: true, id: 43 }))
         .weeklyTarget,
       4,
+    );
+    assert.equal(
+      (await getJson("/api/control/member?id=" + a.memberKey)).attendance.days,
+      1,
+      "attendance survives restart",
     );
     detail = await getJson("/api/control/member?id=" + b.memberKey);
     assert.equal(detail.weeklyTargetOverride, null);
