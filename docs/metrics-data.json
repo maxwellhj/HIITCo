@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-20T03:41:49.555Z",
+  "updatedAt": "2026-10-29T08:27:06.505Z",
   "records": [
     {
       "weekEnding": "2025-01-03",
@@ -1072,7 +1072,7 @@
     {
       "weekEnding": "2026-10-17",
       "source": "26/27Dashboard",
-      "intro": 2,
+      "intro": 0,
       "membershipsSold": 1,
       "attendance": 418,
       "visits": 2.2967032967032965,
@@ -1080,6 +1080,18 @@
       "churn": 0.027472527472527472,
       "autopay": 182,
       "suspended": 16
+    },
+    {
+      "weekEnding": "2026-10-24",
+      "source": "26/27Dashboard",
+      "intro": 1,
+      "membershipsSold": null,
+      "attendance": 401,
+      "visits": 2.1793478260869565,
+      "cancels": 7,
+      "churn": 0.03804347826086957,
+      "autopay": 184,
+      "suspended": 13
     }
   ]
 }
