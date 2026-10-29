@@ -812,6 +812,10 @@ if(!latest||!allowed.some(key=>finiteMetric(latest[key]))||newestReported>nzToda
 const newRows=normalizeMetricRows(clean,nzToday());
 if(!newRows.length)throw Error('No reported metric rows were returned.');
 const previousLatest=performanceRows.at(-1)?.weekEnding;
+if(previousLatest&&newestReported<previousLatest){
+refreshStatus.textContent='The live feed is older than the loaded data. Keeping the latest reported column: '+dateLabel(previousLatest)+'. The Google feed deployment needs updating.';
+return;
+}
 performanceRows=newRows;metricsSnapshotTime=payload.updatedAt;
 setupPerformancePeriods();
 document.getElementById('performance-period').value=metricKey(performanceRows.at(-1),document.getElementById('performance-view').value);
