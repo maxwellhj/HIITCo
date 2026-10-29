@@ -70,6 +70,15 @@ export function TrophyRoom() {
     };
   }, [attempt]);
   const earned = new Set(data?.earnedStickerIds ?? []);
+  const stickers = [...(data?.stickers ?? [])].sort(
+    (a, b) =>
+      Number(earned.has(b.id)) - Number(earned.has(a.id)) ||
+      a.name.localeCompare(b.name, "en-NZ", {
+        sensitivity: "base",
+        numeric: true,
+      }) ||
+      a.id.localeCompare(b.id),
+  );
   return (
     <Card className="trophy-room">
       <div className="section-top">
@@ -98,7 +107,7 @@ export function TrophyRoom() {
         <p role="status">Loading your stickers…</p>
       ) : data.stickers.length ? (
         <div className="sticker-grid">
-          {data.stickers.map((s) => (
+          {stickers.map((s) => (
             <div
               key={s.id}
               className={`collectable-sticker ${earned.has(s.id) ? "earned" : "locked"}`}
