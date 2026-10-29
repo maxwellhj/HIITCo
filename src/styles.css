@@ -3228,3 +3228,6 @@ td > svg {
 .event-calendar-links h4 {flex-basis:100%;margin:0 0 2px;}
 
 .trophy-filters{display:flex;gap:8px;margin:18px 0;flex-wrap:wrap}.trophy-filters button{padding:10px 16px;min-height:42px;font-size:13px}.sticker-category-control{display:grid;gap:6px;font-size:12px;text-align:left;width:100%;margin-top:10px}.sticker-category-control select{width:100%;min-width:0;padding:10px;font-size:13px}
+
+.collectable-sticker .sticker-exclusivity{font-size:12px;line-height:1.5;margin:9px 0 0;color:#4e687b}.collectable-sticker.earned .sticker-exclusivity{color:#25664b}
+.trophy-filters button{margin:0}.trophy-filters button[aria-pressed="true"]{background:#98c1df;border-color:#98c1df;color:#172934}.trophy-filters button[aria-pressed="false"]{background:#fff;border-color:#e0e4e7}

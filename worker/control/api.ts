@@ -22,17 +22,23 @@ const isKey = (v: unknown): v is string =>
   typeof v === "string" && /^[a-f0-9]{64}$/.test(v);
 const isId = (v: unknown): v is string =>
   typeof v === "string" && /^[a-zA-Z0-9-]{1,80}$/.test(v);
-async function stickers(env: ControlEnv): Promise<ClubSticker[]> {
-  const data = await controlData(env, "/stickers");
+async function stickers(
+  env: ControlEnv,
+  rows?: { id: string; sealed: string; unlock_count?: number }[],
+): Promise<ClubSticker[]> {
+  const data = rows ? { rows } : await controlData(env, "/stickers");
   return Promise.all(
-    data.rows.map(async (r: { id: string; sealed: string }) => ({
-      ...(await openTraining(
-        r.sealed,
-        env.GYMMASTER_API_KEY!,
-        "control.sticker:" + r.id,
-      )),
-      image: "/api/gymmaster/trophy-art/" + r.id,
-    })),
+    data.rows.map(
+      async (r: { id: string; sealed: string; unlock_count?: number }) => ({
+        ...(await openTraining(
+          r.sealed,
+          env.GYMMASTER_API_KEY!,
+          "control.sticker:" + r.id,
+        )),
+        image: "/api/gymmaster/trophy-art/" + r.id,
+        unlockCount: r.unlock_count,
+      }),
+    ),
   );
 }
 async function artwork(env: ControlEnv, id: string) {
@@ -402,12 +408,19 @@ export async function memberTrophies(
       session.memberId,
       env.GYMMASTER_API_KEY!,
     );
-    const data = await controlData(env, "/awards?id=" + memberKey),
+    const data = await controlData(
+        env,
+        (path === "/api/gymmaster/trophies" ? "/trophies?id=" : "/awards?id=") +
+          memberKey,
+      ),
       earnedStickerIds = data.awards.map(
         (a: { sticker_id: string }) => a.sticker_id,
       );
     if (path === "/api/gymmaster/trophies")
-      return apiJson({ stickers: await stickers(env), earnedStickerIds });
+      return apiJson({
+        stickers: await stickers(env, data.rows),
+        earnedStickerIds,
+      });
     const id = path.slice("/api/gymmaster/trophy-art/".length);
     if (!isId(id) || !earnedStickerIds.includes(id))
       return apiJson({ error: "not_found" }, 404);

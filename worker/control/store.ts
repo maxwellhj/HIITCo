@@ -36,6 +36,7 @@ export class ControlStore {
       "CREATE TABLE IF NOT EXISTS members (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS stickers (id TEXT PRIMARY KEY,sealed TEXT NOT NULL,art TEXT NOT NULL,mime TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS awards (member_key TEXT NOT NULL,sticker_id TEXT NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(member_key,sticker_id))",
+      "CREATE INDEX IF NOT EXISTS awards_by_sticker ON awards(sticker_id)",
       "CREATE TABLE IF NOT EXISTS snapshots (member_key TEXT NOT NULL,kind TEXT NOT NULL,revision INTEGER NOT NULL,sealed TEXT NOT NULL,PRIMARY KEY(member_key,kind))",
       "CREATE TABLE IF NOT EXISTS audit (id TEXT PRIMARY KEY,member_key TEXT NOT NULL,sealed TEXT NOT NULL,created_at TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS activity_read (id TEXT PRIMARY KEY)",
@@ -219,10 +220,30 @@ export class ControlStore {
               .toArray(),
           });
         }
+        if (url.pathname === "/trophies") {
+          const id = url.searchParams.get("id");
+          if (!key(id)) throw Error();
+          const result = this.state.storage.transactionSync(() => ({
+            rows: sql
+              .exec(
+                "SELECT s.id,s.sealed,COUNT(a.member_key) AS unlock_count FROM stickers s LEFT JOIN awards a ON a.sticker_id=s.id GROUP BY s.id ORDER BY s.id LIMIT 100",
+              )
+              .toArray(),
+            awards: sql
+              .exec(
+                "SELECT sticker_id FROM awards WHERE member_key=? ORDER BY sticker_id",
+                id,
+              )
+              .toArray(),
+          }));
+          return apiJson(result);
+        }
         if (url.pathname === "/stickers")
           return apiJson({
             rows: sql
-              .exec("SELECT id,sealed FROM stickers ORDER BY id LIMIT 100")
+              .exec(
+                "SELECT s.id,s.sealed,COUNT(a.member_key) AS unlock_count FROM stickers s LEFT JOIN awards a ON a.sticker_id=s.id GROUP BY s.id ORDER BY s.id LIMIT 100",
+              )
               .toArray(),
           });
         if (url.pathname === "/art") {

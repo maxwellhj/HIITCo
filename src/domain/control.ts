@@ -11,6 +11,7 @@ export interface AppMember {
 export type StickerCategory = "milestones" | "events";
 export interface ClubSticker {
   category?: StickerCategory;
+  unlockCount?: number;
   id: string;
   name: string;
   description: string;
@@ -125,4 +126,23 @@ export function personalBests(
         a.id.localeCompare(b.id),
     )
     .slice(0, 100);
+}
+
+export function achievementExclusivity(
+  unlocked: boolean,
+  count: unknown,
+): string | null {
+  if (typeof count !== "number" || !Number.isSafeInteger(count) || count < 0)
+    return null;
+  const formatted = count.toLocaleString("en-NZ");
+  if (unlocked) {
+    if (count === 0) return null;
+    return count === 1
+      ? "You’re the only member who has unlocked this achievement."
+      : `You’re one of ${formatted} members who have unlocked this achievement.`;
+  }
+  if (count === 0) return "Be the first to unlock this achievement.";
+  return count === 1
+    ? "Join 1 member who has already unlocked this achievement."
+    : `Join ${formatted} members who have already unlocked this achievement.`;
 }

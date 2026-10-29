@@ -1,3 +1,4 @@
+import { achievementExclusivity } from "../domain/control";
 import { useEffect, useState } from "react";
 import { ArrowRight, LockKeyhole, Trophy, TrendingUp } from "lucide-react";
 import { Card } from "../components/UI";
@@ -147,6 +148,11 @@ export function TrophyRoom() {
               <strong>{s.name}</strong>
               <p>{s.description}</p>
               <small>{earned.has(s.id) ? "Unlocked" : "Locked"}</small>
+              {achievementExclusivity(earned.has(s.id), s.unlockCount) && (
+                <p className="sticker-exclusivity">
+                  {achievementExclusivity(earned.has(s.id), s.unlockCount)}
+                </p>
+              )}
             </div>
           ))}
         </div>

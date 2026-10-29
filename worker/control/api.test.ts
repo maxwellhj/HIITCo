@@ -48,6 +48,18 @@ function environment() {
                 : [],
             });
           }
+          if (p === "/trophies")
+            return Response.json({
+              rows: [...catalog].map(([id, s]) => ({
+                id,
+                sealed: s.sealed,
+                unlock_count: [...awards.values()].filter((set) => set.has(id))
+                  .length,
+              })),
+              awards: [...(awards.get(u.searchParams.get("id")!) ?? [])].map(
+                (sticker_id) => ({ sticker_id }),
+              ),
+            });
           if (p === "/stickers")
             return Response.json({
               rows: [...catalog].map(([id, s]) => ({ id, sealed: s.sealed })),

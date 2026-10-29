@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { personalBests } from "./control";
+import { personalBests, achievementExclusivity } from "./control";
 import { emptyTrainingLog } from "./training";
 import { chowChallenge, emptyChowLog } from "./chow";
 function training() {
@@ -94,5 +94,32 @@ describe("Control Room personal-best activity", () => {
     expect(
       personalBests(log, "chow").map((e) => [e.kind, e.value, e.unit]),
     ).toEqual([["chow_pb", 10, "sets"]]);
+  });
+});
+
+describe("achievement recipient wording", () => {
+  it("uses the aggregate total including the viewer for unlocked achievements", () => {
+    expect(achievementExclusivity(true, 32)).toBe(
+      "You’re one of 32 members who have unlocked this achievement.",
+    );
+    expect(achievementExclusivity(true, 1)).toBe(
+      "You’re the only member who has unlocked this achievement.",
+    );
+  });
+  it("invites members to join an existing group or be the first", () => {
+    expect(achievementExclusivity(false, 32)).toBe(
+      "Join 32 members who have already unlocked this achievement.",
+    );
+    expect(achievementExclusivity(false, 1)).toBe(
+      "Join 1 member who has already unlocked this achievement.",
+    );
+    expect(achievementExclusivity(false, 0)).toBe(
+      "Be the first to unlock this achievement.",
+    );
+  });
+  it("never invents a count if it is absent or invalid", () => {
+    for (const value of [undefined, null, -1, 1.5, "32", NaN])
+      expect(achievementExclusivity(true, value)).toBeNull();
+    expect(achievementExclusivity(true, 0)).toBeNull();
   });
 });

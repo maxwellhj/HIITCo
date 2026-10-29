@@ -1053,6 +1053,13 @@ function StickerManager({
                 <img src={"/api/control/art/" + s.id} alt={s.name} />
                 <strong>{s.name}</strong>
                 <p>{s.description}</p>
+                {s.unlockCount !== undefined && (
+                  <small>
+                    {s.unlockCount.toLocaleString("en-NZ")}{" "}
+                    {s.unlockCount === 1 ? "member has" : "members have"}{" "}
+                    unlocked this
+                  </small>
+                )}
                 <label className="sticker-category-control">
                   Category
                   <select

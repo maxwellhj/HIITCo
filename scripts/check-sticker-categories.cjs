@@ -159,6 +159,37 @@ const { join, resolve } = require("node:path");
       before.stickers.find((s) => s.id === "event").category,
       "events",
     );
+    assert.equal(before.stickers.find((s) => s.id === "mile").unlockCount, 1);
+    assert.equal(before.stickers.find((s) => s.id === "event").unlockCount, 0);
+    await getJson("/api/gymmaster/profile", { member: true, id: 43 });
+    await getJson("/api/gymmaster/profile", { member: true, id: 44 });
+    const second = (await getJson("/api/control/members")).members.find(
+      (m) => m.memberId === 43,
+    );
+    const award = async (memberKey, unlocked) =>
+      json("/api/control/awards", {
+        memberKey,
+        stickerId: "mile",
+        unlocked,
+        requestId: crypto.randomUUID(),
+      });
+    await award(second.memberKey, true);
+    await award(second.memberKey, true);
+    const aggregate = await getJson("/api/gymmaster/trophies", {
+      member: true,
+      id: 44,
+    });
+    assert.equal(
+      aggregate.stickers.find((s) => s.id === "mile").unlockCount,
+      2,
+      "repeat grants count each recipient once",
+    );
+    assert.deepEqual(aggregate.earnedStickerIds, []);
+    assert.equal(
+      JSON.stringify(aggregate).includes(second.memberKey),
+      false,
+      "aggregate count exposes no recipient identities",
+    );
     const art = await call("/api/gymmaster/trophy-art/mile", {
       member: true,
       id: 42,
@@ -210,6 +241,28 @@ const { join, resolve } = require("node:path");
       ).status,
       403,
     );
+    await award(second.memberKey, false);
+    assert.equal(
+      (
+        await getJson("/api/gymmaster/trophies", { member: true, id: 42 })
+      ).stickers.find((s) => s.id === "mile").unlockCount,
+      1,
+    );
+    await award(second.memberKey, true);
+    await award(member.memberKey, false);
+    const locked = await getJson("/api/gymmaster/trophies", {
+      member: true,
+      id: 42,
+    });
+    assert.equal(locked.stickers.find((s) => s.id === "mile").unlockCount, 1);
+    assert.deepEqual(locked.earnedStickerIds, []);
+    await award(second.memberKey, false);
+    assert.equal(
+      (
+        await getJson("/api/gymmaster/trophies", { member: true, id: 42 })
+      ).stickers.find((s) => s.id === "mile").unlockCount,
+      0,
+    );
     await mf.dispose();
     mf = new Miniflare(options);
     assert.equal(
@@ -219,7 +272,7 @@ const { join, resolve } = require("node:path");
       "events",
     );
     console.log(
-      "PASS sticker categories: creation/default, existing sticker categorisation, artwork/awards/timestamp preservation, validation, restricted writes and restart persistence.",
+      "PASS stickers: categories, artwork/award preservation, distinct-recipient counts, repeated grants, revocation, zero counts, recipient privacy, access checks and persistence.",
     );
   } finally {
     await mf.dispose();
