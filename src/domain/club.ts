@@ -7,6 +7,7 @@ export interface ClubContent {
   weeklyTarget: number;
   events: ClubEvent[];
   eventResponses?: EventResponse[];
+  dismissedEventIds?: string[];
 }
 export function parseClubEvent(value: unknown): ClubEvent {
   if (!value || typeof value !== "object") throw Error("Invalid event");

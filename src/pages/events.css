@@ -1,0 +1,102 @@
+.events-list-first .events-upcoming {
+  margin-top: 0;
+}
+.events-list-first .events-upcoming > h2 {
+  margin-bottom: 6px;
+}
+.events-list-first .event-list {
+  margin-top: 16px;
+}
+.events-list-first .event-detail-panel {
+  margin-top: 22px;
+  scroll-margin-top: 20px;
+  outline: none;
+}
+.events-list-first .event-detail h2 {
+  font-size: 24px;
+  margin: 14px 0;
+  overflow-wrap: anywhere;
+}
+.events-list-first .event-facts p {
+  flex-wrap: wrap;
+}
+.events-list-first .event-list-copy small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #526777;
+}
+.home-event-notification {
+  border: 1px solid #c2d8e9;
+  background: #eef6fc;
+  border-left: 4px solid #78add3;
+  border-radius: 15px;
+  padding: 15px 18px;
+  box-shadow: 0 6px 18px #183b5010;
+  touch-action: pan-y;
+  max-width: 100%;
+  min-width: 0;
+}
+.event-notification-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.event-notification-top > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+}
+.home-event-notification h2 {
+  font-size: 18px;
+  margin: 3px 0;
+  overflow-wrap: anywhere;
+}
+.home-event-notification p {
+  font-size: 12px;
+  margin: 4px 0 12px;
+}
+.event-notification-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.event-notification-actions .primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 13px;
+  min-height: 42px;
+  font-size: 12px;
+}
+.event-notification-actions small {
+  font-size: 10px;
+  color: #596b7a;
+}
+.event-notification-top .icon-button {
+  min-width: 36px;
+  min-height: 36px;
+}
+.event-list-copy {
+  min-width: 0;
+}
+.event-list-copy strong {
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-event-notification {
+    transform: none !important;
+  }
+}
+
+.home-event-prompt-viewport {
+  overflow: hidden;
+  min-width: 0;
+  padding-bottom: 6px;
+  border-radius: 15px;
+}

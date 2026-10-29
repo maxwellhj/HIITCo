@@ -83,6 +83,20 @@ export async function clubApi(
       return apiJson({
         weeklyTarget: goal?.weeklyTarget ?? setting?.weeklyTarget ?? 3,
         ...(eventResponses ? { eventResponses } : {}),
+        ...(memberSession
+          ? {
+              dismissedEventIds: (
+                await controlData(
+                  env,
+                  "/event-dismissals?memberKey=" +
+                    (await trainingMemberKey(
+                      memberSession.memberId,
+                      env.GYMMASTER_API_KEY,
+                    )),
+                )
+              ).ids,
+            }
+          : {}),
         events: events.sort(
           (a, b) =>
             a.date.localeCompare(b.date) ||

@@ -87,5 +87,29 @@ export function useClubContent(enabled = true) {
     },
     [],
   );
-  return { data, error, reload, respond };
+  const dismissEvent = useCallback(async (eventId: string) => {
+    const r = await fetch("/api/gymmaster/event-dismiss", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+      redirect: "error",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ eventId }),
+    });
+    if (!r.ok) throw Error();
+    const result = await r.json();
+    if (result.dismissed !== eventId) throw Error();
+    setData((old) =>
+      old
+        ? {
+            ...old,
+            dismissedEventIds: [
+              ...new Set([...(old.dismissedEventIds ?? []), eventId]),
+            ],
+          }
+        : old,
+    );
+    setAttempt((v) => v + 1);
+  }, []);
+  return { data, error, reload, respond, dismissEvent };
 }

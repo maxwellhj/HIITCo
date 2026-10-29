@@ -108,7 +108,7 @@ export function HomePage({
           <p>No upcoming events just yet.</p>
         )}
         <a className="text-button" href="#events">
-          View calendar <ArrowRight size={15} />
+          View all events <ArrowRight size={15} />
         </a>
       </Card>
 

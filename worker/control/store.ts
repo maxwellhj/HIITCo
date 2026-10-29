@@ -24,6 +24,7 @@ export class ControlStore {
   constructor(private state: State) {
     initConnect(state.storage.sql);
     for (const sql of [
+      "CREATE TABLE IF NOT EXISTS event_dismissals (member_key TEXT NOT NULL,event_id TEXT NOT NULL,PRIMARY KEY(member_key,event_id))",
       "CREATE TABLE IF NOT EXISTS attendance (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL,updated_at TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS event_responses (member_key TEXT NOT NULL,event_id TEXT NOT NULL,sealed TEXT NOT NULL,PRIMARY KEY(member_key,event_id))",
       "CREATE TABLE IF NOT EXISTS member_targets (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL)",
@@ -46,6 +47,20 @@ export class ControlStore {
     try {
       if (url.pathname === "/connect") return await connectStore(request, sql);
       if (request.method === "GET") {
+        if (url.pathname === "/event-dismissals") {
+          const memberKey = url.searchParams.get("memberKey");
+          if (!key(memberKey)) throw Error();
+          return apiJson({
+            ids: sql
+              .exec<{ event_id: string }>(
+                "SELECT d.event_id FROM event_dismissals d JOIN club_events e ON e.id=d.event_id WHERE d.member_key=?",
+                memberKey,
+              )
+              .toArray()
+              .map((r) => r.event_id),
+          });
+        }
+
         if (url.pathname === "/attendance") {
           const id = url.searchParams.get("id");
           if (!key(id)) throw Error();
@@ -220,6 +235,21 @@ export class ControlStore {
         );
         return apiJson({ saved: true });
       }
+      if (url.pathname === "/event-dismiss") {
+        if (!key(body.memberKey) || !stickerId(body.eventId)) throw Error();
+        if (
+          !sql
+            .exec("SELECT id FROM club_events WHERE id=?", body.eventId)
+            .toArray().length
+        )
+          return apiJson({ error: "not_found" }, 404);
+        sql.exec(
+          "INSERT OR IGNORE INTO event_dismissals(member_key,event_id) VALUES(?,?)",
+          body.memberKey,
+          body.eventId,
+        );
+        return apiJson({ saved: true });
+      }
       if (url.pathname === "/event-response") {
         if (
           !key(body.memberKey) ||
@@ -291,6 +321,7 @@ export class ControlStore {
           this.state.storage.transactionSync(() => {
             sql.exec("DELETE FROM club_events WHERE id=?", body.id);
             sql.exec("DELETE FROM event_responses WHERE event_id=?", body.id);
+            sql.exec("DELETE FROM event_dismissals WHERE event_id=?", body.id);
           });
         else {
           if (typeof body.sealed !== "string" || body.sealed.length > 32000)

@@ -1,4 +1,5 @@
-import { EventResponse } from "../components/EventResponse";
+import { HomeEventPrompt } from "../components/HomeEventPrompt";
+import "../pages/events.css";
 import { useState } from "react";
 import { ArrowRight, CalendarDays, Flame, Trophy, X } from "lucide-react";
 import { Card } from "../components/UI";
@@ -36,7 +37,7 @@ export function MemberDashboard({
   progress?: boolean;
   showStats?: boolean;
 }) {
-  const { data: club, error: clubError, respond } = useClubContent();
+  const { data: club, error: clubError, dismissEvent } = useClubContent();
   const today = dateKey(new Date());
   const trained = trainingDays(days, checkins, today);
   const [week, setWeek] = useState(0),
@@ -77,6 +78,7 @@ export function MemberDashboard({
     : [];
   return (
     <div className="home-overview member-overview">
+      {!progress && <HomeEventPrompt club={club} dismiss={dismissEvent} />}
       {(progress || showStats) && (
         <div className="member-stats-dropdown" id="member-home-stats">
           <div className="home-stat-row">
@@ -320,7 +322,10 @@ export function MemberDashboard({
               <CalendarDays size={17} /> Upcoming club events
             </h2>
             {event ? (
-              <a className="home-next-event" href="#events">
+              <a
+                className="home-next-event"
+                href={`#events/${encodeURIComponent(event.id)}`}
+              >
                 <span>
                   <strong>{event.title}</strong>
                   <small>
@@ -339,19 +344,8 @@ export function MemberDashboard({
                     : "No upcoming events just yet."}
               </p>
             )}
-            {event && (
-              <EventResponse
-                event={event}
-                value={
-                  club?.eventResponses?.find(
-                    (response) => response.eventId === event.id,
-                  )?.status
-                }
-                onRespond={respond}
-              />
-            )}
             <a className="text-button" href="#events">
-              View calendar <ArrowRight size={15} />
+              View all events <ArrowRight size={15} />
             </a>
           </Card>
         </>

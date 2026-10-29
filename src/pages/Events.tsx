@@ -2,51 +2,50 @@ import { EventResponse } from "../components/EventResponse";
 import { useClubContent } from "../member/useClubContent";
 import { eventTimeLabel } from "../domain/club";
 import { useEffect, useRef, useState } from "react";
-import {
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  MapPin,
-  Backpack,
-} from "lucide-react";
+import { ChevronRight, Clock, MapPin, Backpack, X } from "lucide-react";
 import { Card } from "../components/UI";
 import { clubEvents as demoEvents } from "../data/events";
 import { dateKey, formatDate } from "../domain/attendance";
-import {
-  calendarDays,
-  monthStart,
-  moveMonth,
-  upcomingEvents,
-} from "../domain/events";
-
+import { upcomingEvents, eventResponseLabels } from "../domain/events";
+import "./events.css";
+function routeEvent() {
+  const [page, id] = location.hash.slice(1).split("/");
+  if (page !== "events" || !id) return null;
+  try {
+    return decodeURIComponent(id);
+  } catch {
+    return null;
+  }
+}
 export function Events({ demo = false }: { demo?: boolean }) {
   const { data, error, reload, respond } = useClubContent(!demo);
-  const clubEvents = demo ? demoEvents : (data?.events ?? []);
-  const initialized = useRef(false);
-  const today = dateKey(new Date());
-  const upcoming = upcomingEvents(clubEvents, today);
-  const [selected, setSelected] = useState(upcoming[0]?.date ?? today);
-  const [month, setMonth] = useState(monthStart(upcoming[0]?.date ?? today));
+  const events = demo ? demoEvents : (data?.events ?? []),
+    today = dateKey(new Date());
+  const upcoming = upcomingEvents(events, today);
+  const [selected, setSelected] = useState<string | null>(routeEvent);
+  const event = events.find((e) => e.id === selected),
+    details = useRef<HTMLElement>(null),
+    scrolled = useRef<string | null>(null);
   useEffect(() => {
-    if (data && !initialized.current) {
-      initialized.current = true;
-      const first = upcomingEvents(data.events, today)[0]?.date ?? today;
-      setSelected(first);
-      setMonth(monthStart(first));
+    const change = () => setSelected(routeEvent());
+    window.addEventListener("hashchange", change);
+    return () => window.removeEventListener("hashchange", change);
+  }, []);
+  useEffect(() => {
+    if (event && scrolled.current !== event.id) {
+      scrolled.current = event.id;
+      requestAnimationFrame(() => {
+        details.current?.scrollIntoView({
+          block: "start",
+          behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+            ? "instant"
+            : "smooth",
+        });
+        details.current?.focus({ preventScroll: true });
+      });
     }
-  }, [data, today]);
-  const detailsRef = useRef<HTMLElement>(null);
-  const selectedEvents = clubEvents.filter((event) => event.date === selected);
-  function selectDate(date: string) {
-    setSelected(date);
-    setMonth(monthStart(date));
-  }
-  function changeMonth(offset: number) {
-    const next = moveMonth(month, offset);
-    setMonth(next);
-    setSelected(monthStart(today) === next ? today : next);
-  }
+    if (!selected) scrolled.current = null;
+  }, [event?.id, selected]);
   if (!demo && !data)
     return (
       <Card>
@@ -61,7 +60,7 @@ export function Events({ demo = false }: { demo?: boolean }) {
       </Card>
     );
   return (
-    <div className="events-space">
+    <div className="events-space events-list-first">
       {error && (
         <p className="error" role="alert">
           {error}
@@ -69,187 +68,56 @@ export function Events({ demo = false }: { demo?: boolean }) {
       )}
       {demo && (
         <p className="events-demo">
-          <span className="pill">DEMO EVENTS</span> Sample events to try the
-          calendar. These are not scheduled club events.
+          <span className="pill">DEMO EVENTS</span> Sample events. These are not
+          scheduled club events.
         </p>
       )}
-      <div className="events-layout">
-        <Card className="event-calendar">
-          <div className="calendar-toolbar">
-            <h2 aria-live="polite">
-              {formatDate(month, { month: "long", year: "numeric" })}
-            </h2>
-            <div>
-              <button
-                className="icon-button"
-                aria-label="Previous month"
-                onClick={() => changeMonth(-1)}
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                className="icon-button"
-                aria-label="Next month"
-                onClick={() => changeMonth(1)}
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          </div>
-          <div className="calendar-weekdays" aria-hidden="true">
-            {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
-              <span key={i}>{day}</span>
-            ))}
-          </div>
-          <div
-            className="calendar-dates"
-            role="group"
-            aria-label={formatDate(month, { month: "long", year: "numeric" })}
-          >
-            {calendarDays(month).map((date, i) => {
-              if (!date) return <span key={`blank-${i}`} aria-hidden="true" />;
-              const count = clubEvents.filter((e) => e.date === date).length;
-              return (
-                <button
-                  key={date}
-                  type="button"
-                  className={selected === date ? "selected" : ""}
-                  aria-pressed={selected === date}
-                  aria-current={date === today ? "date" : undefined}
-                  aria-label={`${formatDate(date, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}${count ? `, ${count} event${count === 1 ? "" : "s"}` : ", no events"}`}
-                  onClick={() => setSelected(date)}
-                >
-                  <span>{Number(date.slice(-2))}</span>
-                  <span className="calendar-markers" aria-hidden="true">
-                    {count > 0 && <i />}
-                    {count > 1 && <i />}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-          <div className="calendar-legend">
-            <span>
-              <i /> Club event
-            </span>
-            <button className="text-button" onClick={() => selectDate(today)}>
-              Today
-            </button>
-          </div>
-          <p className="small muted">
-            Tap a date for details · New Zealand time
-          </p>
-        </Card>
-        <section
-          className="event-detail-panel"
-          ref={detailsRef}
-          aria-labelledby="selected-date-title"
-          aria-live="polite"
-        >
-          <h2 id="selected-date-title">
-            {formatDate(selected, {
-              weekday: "long",
-              day: "numeric",
-              month: "long",
-            })}
-          </h2>
-          {selectedEvents.length ? (
-            selectedEvents.map((event) => (
-              <Card className="event-detail" key={event.id}>
-                <span className="pill">
-                  {event.date < today ? "PAST EVENT" : "CLUB EVENT"}
-                </span>
-                <h3>{event.title}</h3>
-                <div className="event-facts">
-                  <p>
-                    <Clock size={16} />
-                    {eventTimeLabel(event.time)}{" "}
-                    {event.time && <span className="muted">NZ time</span>}
-                  </p>
-                  {event.location && (
-                    <p>
-                      <MapPin size={16} />
-                      {event.location}
-                    </p>
-                  )}
-                </div>
-                {!demo && (
-                  <EventResponse
-                    event={event}
-                    value={
-                      data?.eventResponses?.find(
-                        (response) => response.eventId === event.id,
-                      )?.status
-                    }
-                    onRespond={respond}
-                  />
-                )}
-                <h4>About this event</h4>
-                <p className="club-event-description">{event.description}</p>
-                {event.bring && (
-                  <div className="event-bring">
-                    <Backpack size={18} />
-                    <p>{event.bring}</p>
-                  </div>
-                )}
-                {event.bookingUrl && (
-                  <a
-                    className="primary event-booking-link"
-                    href={event.bookingUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Book this event
-                  </a>
-                )}
-              </Card>
-            ))
-          ) : (
-            <Card className="event-empty">
-              <CalendarDays size={28} />
-              <h3>No events on this day.</h3>
-              <p>Choose a marked date or browse the upcoming events below.</p>
-            </Card>
-          )}
-        </section>
-      </div>
       <section
         className="events-upcoming"
         aria-labelledby="upcoming-events-title"
       >
         <h2 id="upcoming-events-title">Upcoming club events</h2>
+        <p className="small muted">
+          Choose an event to see the details and respond.
+        </p>
         {upcoming.length ? (
           <div className="event-list">
-            {upcoming.map((event) => (
-              <button
-                className={`event-list-item ${selected === event.date ? "selected" : ""}`}
-                key={event.id}
-                onClick={() => {
-                  selectDate(event.date);
-                  requestAnimationFrame(() =>
-                    detailsRef.current?.scrollIntoView({
-                      behavior: window.matchMedia(
-                        "(prefers-reduced-motion: reduce)",
-                      ).matches
-                        ? "instant"
-                        : "smooth",
-                      block: "start",
-                    }),
-                  );
-                }}
-                aria-label={`View ${event.title}, ${formatDate(event.date)}`}
-              >
-                <span className="event-date-tile">
-                  <strong>{Number(event.date.slice(-2))}</strong>
-                  <span>{formatDate(event.date, { month: "short" })}</span>
-                </span>
-                <span className="event-list-copy">
-                  <strong>{event.title}</strong>
-                  <span>{eventTimeLabel(event.time)}</span>
-                </span>
-                <ChevronRight size={18} />
-              </button>
-            ))}
+            {upcoming.map((e) => {
+              const status = data?.eventResponses?.find(
+                (r) => r.eventId === e.id,
+              )?.status;
+              return (
+                <button
+                  className={`event-list-item ${selected === e.id ? "selected" : ""}`}
+                  key={e.id}
+                  aria-expanded={selected === e.id}
+                  aria-controls="club-event-detail"
+                  aria-label={`View ${e.title}, ${formatDate(e.date)}`}
+                  onClick={() => {
+                    setSelected(e.id);
+                    location.hash = `events/${encodeURIComponent(e.id)}`;
+                  }}
+                >
+                  <span className="event-date-tile">
+                    <strong>{Number(e.date.slice(-2))}</strong>
+                    <span>{formatDate(e.date, { month: "short" })}</span>
+                  </span>
+                  <span className="event-list-copy">
+                    <strong>{e.title}</strong>
+                    <span>
+                      {eventTimeLabel(e.time)}
+                      {e.time ? " · NZ time" : ""}
+                    </span>
+                    <small>
+                      {status
+                        ? `Your response: ${eventResponseLabels[status]}`
+                        : "Response requested"}
+                    </small>
+                  </span>
+                  <ChevronRight size={18} />
+                </button>
+              );
+            })}
           </div>
         ) : (
           <Card>
@@ -257,6 +125,96 @@ export function Events({ demo = false }: { demo?: boolean }) {
           </Card>
         )}
       </section>
+      {event && (
+        <section
+          id="club-event-detail"
+          className="event-detail-panel"
+          ref={details}
+          tabIndex={-1}
+          aria-labelledby="club-event-title"
+        >
+          <Card className="event-detail">
+            <div className="section-top">
+              <span className="pill">
+                {event.date < today ? "PAST EVENT" : "CLUB EVENT"}
+              </span>
+              <button
+                className="icon-button"
+                aria-label="Close event details"
+                onClick={() => {
+                  setSelected(null);
+                  location.hash = "events";
+                }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <h2 id="club-event-title">{event.title}</h2>
+            <div className="event-facts">
+              <p>
+                <Clock size={16} />
+                {formatDate(event.date, {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}{" "}
+                · {eventTimeLabel(event.time)}
+                {event.time ? " NZ time" : ""}
+              </p>
+              {event.location && (
+                <p>
+                  <MapPin size={16} />
+                  {event.location}
+                </p>
+              )}
+            </div>
+            {!demo && (
+              <EventResponse
+                key={event.id}
+                event={event}
+                value={
+                  data?.eventResponses?.find((r) => r.eventId === event.id)
+                    ?.status
+                }
+                onRespond={respond}
+              />
+            )}
+            <h4>About this event</h4>
+            <p className="club-event-description">{event.description}</p>
+            {event.bring && (
+              <div className="event-bring">
+                <Backpack size={18} />
+                <p>{event.bring}</p>
+              </div>
+            )}
+            {event.bookingUrl && (
+              <a
+                className="primary event-booking-link"
+                href={event.bookingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Book this event
+              </a>
+            )}
+          </Card>
+        </section>
+      )}
+      {selected && !event && (
+        <Card>
+          <p>This event is no longer available.</p>
+          <button
+            className="secondary"
+            onClick={() => {
+              setSelected(null);
+              location.hash = "events";
+            }}
+          >
+            Back to upcoming events
+          </button>
+        </Card>
+      )}
     </div>
   );
 }

@@ -99,7 +99,7 @@ export function EventResponse({
             ? "Your response: " + eventResponseLabels[value]
             : "Choose your response. You can change it later."}
       </p>
-      <CalendarLinks event={event} />{" "}
+      {value && <CalendarLinks event={event} />}
       {!!event.bookingUrl && (
         <p className="small muted">
           If you’re going, use the booking link to reserve your place.

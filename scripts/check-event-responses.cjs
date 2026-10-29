@@ -164,6 +164,51 @@ const { join, resolve } = require("node:path");
         await getJson("/api/control/member?id=" + a.memberKey)
       ).eventResponses.every((e) => e.status === null),
     );
+    const dismiss = (id, eventId = event.id, extra = {}) =>
+      call("/api/gymmaster/event-dismiss", {
+        method: "POST",
+        member: true,
+        id,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId }),
+        ...extra,
+      });
+    assert.equal((await dismiss(42)).status, 200);
+    assert.equal((await dismiss(42)).status, 200);
+    assert.deepEqual(
+      (await getJson("/api/gymmaster/club", { member: true, id: 42 }))
+        .dismissedEventIds,
+      [event.id],
+    );
+    assert.deepEqual(
+      (await getJson("/api/gymmaster/club", { member: true, id: 43 }))
+        .dismissedEventIds,
+      [],
+    );
+    assert.deepEqual(
+      (await getJson("/api/gymmaster/club", { member: true, id: 42 }))
+        .eventResponses,
+      [],
+      "dismissal never creates an RSVP",
+    );
+    assert.equal(
+      (await getJson("/api/control/club")).dismissedEventIds,
+      undefined,
+    );
+    assert.equal((await dismiss(42, event.id, { member: false })).status, 401);
+    assert.equal(
+      (await dismiss(42, event.id, { origin: "https://other.test" })).status,
+      403,
+    );
+    assert.equal(
+      (
+        await dismiss(42, event.id, {
+          body: JSON.stringify({ eventId: event.id, memberId: 43 }),
+        })
+      ).status,
+      400,
+    );
+    assert.equal((await dismiss(42, "missing-event")).status, 404);
     assert.equal((await rsvp(42, "going")).status, 200);
     assert.equal((await rsvp(43, "maybe")).status, 200);
     assert.equal((await rsvp(42, "cant_attend")).status, 200);
@@ -225,6 +270,11 @@ const { join, resolve } = require("node:path");
     mf = new Miniflare(options);
     own = await getJson("/api/gymmaster/club", { member: true, id: 42 });
     assert.equal(own.eventResponses[0].status, "cant_attend");
+    assert.deepEqual(
+      own.dismissedEventIds,
+      [event.id],
+      "dismissals survive store restart",
+    );
     await json("/api/control/club/events/remove", { id: event.id });
     assert.deepEqual(
       (await getJson("/api/gymmaster/club", { member: true, id: 42 }))
@@ -235,6 +285,12 @@ const { join, resolve } = require("node:path");
       (await getJson("/api/control/member?id=" + a.memberKey)).eventResponses
         .length,
       1,
+    );
+    assert.deepEqual(
+      (await getJson("/api/gymmaster/club", { member: true, id: 42 }))
+        .dismissedEventIds,
+      [],
+      "deleting an event clears its dismissal",
     );
     assert.equal((await rsvp(42, "going")).status, 404);
     console.log(

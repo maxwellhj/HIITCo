@@ -72,7 +72,8 @@ export async function eventResponseApi(
   env: ControlEnv,
 ): Promise<Response | null> {
   const url = new URL(request.url);
-  if (url.pathname !== "/api/gymmaster/event-response") return null;
+  const dismiss = url.pathname === "/api/gymmaster/event-dismiss";
+  if (url.pathname !== "/api/gymmaster/event-response" && !dismiss) return null;
   if (request.method !== "POST")
     return apiJson({ error: "method_not_allowed" }, 405);
   const session = await readSession(request, env.GYMMASTER_API_KEY);
@@ -106,10 +107,12 @@ export async function eventResponseApi(
     if (
       !body ||
       typeof body !== "object" ||
-      Object.keys(body).some((k) => !["eventId", "status"].includes(k)) ||
+      Object.keys(body).some(
+        (k) => !(dismiss ? ["eventId"] : ["eventId", "status"]).includes(k),
+      ) ||
       typeof body.eventId !== "string" ||
       !/^[a-zA-Z0-9-]{1,80}$/.test(body.eventId) ||
-      !states.includes(body.status)
+      (!dismiss && !states.includes(body.status))
     )
       return apiJson({ error: "invalid_request" }, 400);
     const memberKey = await trainingMemberKey(
@@ -119,6 +122,13 @@ export async function eventResponseApi(
     const events = await controlData(env, "/club");
     if (!events.rows.some((e: { id: string }) => e.id === body.eventId))
       return apiJson({ error: "event_not_found" }, 404);
+    if (dismiss) {
+      await controlData(env, "/event-dismiss", {
+        memberKey,
+        eventId: body.eventId,
+      });
+      return apiJson({ dismissed: body.eventId });
+    }
     const response = {
       status: body.status,
       updatedAt: new Date().toISOString(),
