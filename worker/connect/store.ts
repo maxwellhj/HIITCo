@@ -1,3 +1,9 @@
+import {
+  initGroups,
+  listGroups,
+  groupStore,
+  leaveSharedGroups,
+} from "./groups";
 import { apiJson, limitedText } from "../gymmaster/auth";
 export interface ConnectSql {
   exec<T = Record<string, unknown>>(
@@ -6,6 +12,7 @@ export interface ConnectSql {
   ): { toArray(): T[] };
 }
 export function initConnect(sql: ConnectSql) {
+  initGroups(sql);
   for (const query of [
     "CREATE TABLE IF NOT EXISTS connect_profiles (id TEXT PRIMARY KEY,name TEXT NOT NULL,public INTEGER NOT NULL DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS connect_edges (a TEXT NOT NULL,b TEXT NOT NULL,sender TEXT NOT NULL,status TEXT NOT NULL,PRIMARY KEY(a,b))",
@@ -26,6 +33,13 @@ export async function connectStore(request: Request, sql: ConnectSql) {
   if (
     !validId(actor) ||
     ![
+      "create_group",
+      "join_group",
+      "decline_group",
+      "leave_group",
+      "close_group",
+      "group_messages",
+      "group_send",
       "state",
       "privacy",
       "request",
@@ -42,9 +56,9 @@ export async function connectStore(request: Request, sql: ConnectSql) {
     return apiJson({ error: "invalid_request" }, 400);
   const bucket = Math.floor(Date.now() / 60000),
     scope =
-      action === "state" || action === "messages"
+      action === "state" || action === "messages" || action === "group_messages"
         ? "read"
-        : action === "request"
+        : action === "request" || action === "create_group"
           ? "request"
           : "write",
     limit = scope === "read" ? 90 : scope === "request" ? 5 : 30;
@@ -69,6 +83,18 @@ export async function connectStore(request: Request, sql: ConnectSql) {
     actor,
     body.name,
   );
+  if (
+    [
+      "create_group",
+      "join_group",
+      "decline_group",
+      "leave_group",
+      "close_group",
+      "group_messages",
+      "group_send",
+    ].includes(action)
+  )
+    return groupStore(body, sql);
   if (action === "privacy") {
     if (typeof body.public !== "boolean")
       return apiJson({ error: "invalid_request" }, 400);
@@ -110,6 +136,7 @@ export async function connectStore(request: Request, sql: ConnectSql) {
       people,
       edges,
       blocked,
+      groups: listGroups(sql, actor),
     });
   }
   if (!validId(peer) || peer === actor)
@@ -146,6 +173,13 @@ export async function connectStore(request: Request, sql: ConnectSql) {
     if (
       !edge &&
       !sql
+        .exec(
+          "SELECT a.group_id FROM connect_group_members a JOIN connect_group_members b ON a.group_id=b.group_id WHERE a.member_id=? AND b.member_id=? AND a.status='active' AND b.status='active'",
+          actor,
+          peer,
+        )
+        .toArray().length &&
+      !sql
         .exec("SELECT id FROM connect_profiles WHERE id=? AND public=1", peer)
         .toArray().length
     )
@@ -156,6 +190,7 @@ export async function connectStore(request: Request, sql: ConnectSql) {
       peer,
     );
     remove();
+    leaveSharedGroups(sql, actor, peer);
     return apiJson({ saved: true });
   }
   if (action === "unblock") {

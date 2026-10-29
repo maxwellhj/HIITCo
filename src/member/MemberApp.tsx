@@ -352,41 +352,43 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
           </div>
         </header>
         <main id="main-content">
-          <div
-            className={`page-heading ${page === "home" ? "home-heading" : ""}`}
-          >
-            <div className="eyebrow">
-              <span />
-              {page === "home"
-                ? "PROGRESS OVER PERFECTION."
-                : "YOUR HIIT CO. HUB"}
+          {page !== "connect" && (
+            <div
+              className={`page-heading ${page === "home" ? "home-heading" : ""}`}
+            >
+              <div className="eyebrow">
+                <span />
+                {page === "home"
+                  ? "PROGRESS OVER PERFECTION."
+                  : "YOUR HIIT CO. HUB"}
+              </div>
+              <div className="heading-line">
+                <h1>{titles[page]}</h1>
+                {page === "home" ? (
+                  <button
+                    className="member-visit-total"
+                    aria-expanded={showHomeStats}
+                    aria-controls="member-home-stats"
+                    onClick={() => setShowHomeStats(!showHomeStats)}
+                  >
+                    <strong>{profile.totalVisits ?? "—"}</strong>
+                    <span>Total Club Visits</span>
+                    <small>
+                      {showHomeStats ? "Hide progress ▴" : "View progress ▾"}
+                    </small>
+                  </button>
+                ) : (
+                  <span className="date-label">
+                    {formatDate(new Date().toISOString(), {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </span>
+                )}
+              </div>
             </div>
-            <div className="heading-line">
-              <h1>{titles[page]}</h1>
-              {page === "home" ? (
-                <button
-                  className="member-visit-total"
-                  aria-expanded={showHomeStats}
-                  aria-controls="member-home-stats"
-                  onClick={() => setShowHomeStats(!showHomeStats)}
-                >
-                  <strong>{profile.totalVisits ?? "—"}</strong>
-                  <span>Total Club Visits</span>
-                  <small>
-                    {showHomeStats ? "Hide progress ▴" : "View progress ▾"}
-                  </small>
-                </button>
-              ) : (
-                <span className="date-label">
-                  {formatDate(new Date().toISOString(), {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  })}
-                </span>
-              )}
-            </div>
-          </div>
+          )}
           {page === "home" ? (
             <MemberDashboard
               profile={profile}
@@ -442,7 +444,7 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
               route={logRoute}
             />
           )}
-          {(page === "home" || page === "events" || page === "connect") && (
+          {(page === "home" || page === "events") && (
             <p className="member-source small muted">
               Workouts and events come from the club. Connect is available to
               signed-in members.

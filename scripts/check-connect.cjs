@@ -304,8 +304,165 @@ const { join, resolve } = require("node:path");
     for (let i = 0; i < 30; i++)
       await post(47, { action: "privacy", public: true });
     await post(47, { action: "privacy", public: false }, 429);
+    for (const id of [101, 102, 103, 104])
+      await getJson("/api/gymmaster/profile", { member: true, id });
+    const owner = await state(101),
+      guest = await state(102),
+      guest2 = await state(103),
+      outsider = await state(104);
+    for (const [id, person] of [
+      [102, guest],
+      [103, guest2],
+    ]) {
+      await post(id, { action: "privacy", public: true });
+      await post(101, { action: "request", peer: person.me.id });
+      await post(id, { action: "accept", peer: owner.me.id });
+      await post(id, { action: "privacy", public: false });
+    }
+    const create = (group, members = [guest.me.id, guest2.me.id]) =>
+      post(101, {
+        action: "create_group",
+        group,
+        groupName: "Morning crew",
+        members,
+      });
+    await post(
+      104,
+      {
+        action: "create_group",
+        group: crypto.randomUUID(),
+        groupName: "Invalid",
+        members: [guest.me.id, owner.me.id],
+      },
+      403,
+    );
+    await post(
+      104,
+      {
+        action: "create_group",
+        group: crypto.randomUUID(),
+        groupName: "Invalid",
+        members: [guest.me.id, guest.me.id],
+      },
+      400,
+    );
+    await post(
+      104,
+      {
+        action: "create_group",
+        group: crypto.randomUUID(),
+        groupName: "Invalid",
+        members: [guest.me.id],
+      },
+      400,
+    );
+    const group = crypto.randomUUID();
+    await create(group);
+    await create(group);
+    assert.equal((await state(101)).groups.length, 1);
+    assert.equal((await state(102)).groups[0].status, "invited");
+    assert.equal(
+      (await state(102)).groups[0].members.length,
+      1,
+      "pending members are hidden until they join",
+    );
+    const groupHistory = async (id, status = 200) => {
+      const r = await call("/api/gymmaster/connect?group=" + group, {
+        member: true,
+        id,
+      });
+      assert.equal(r.status, status, await r.clone().text());
+      return r.json();
+    };
+    await groupHistory(102, 403);
+    await groupHistory(104, 404);
+    await post(
+      102,
+      {
+        action: "group_send",
+        group,
+        text: "Not yet",
+        messageId: crypto.randomUUID(),
+      },
+      403,
+    );
+    await post(102, { action: "close_group", group }, 403);
+    await post(102, { action: "join_group", group });
+    const groupMessageId = crypto.randomUUID();
+    await post(101, {
+      action: "group_send",
+      group,
+      text: "Crew session at six?",
+      messageId: groupMessageId,
+    });
+    await post(101, {
+      action: "group_send",
+      group,
+      text: "Crew session at six?",
+      messageId: groupMessageId,
+    });
+    await post(102, {
+      action: "group_send",
+      group,
+      text: "Count me in",
+      messageId: crypto.randomUUID(),
+    });
+    let groupMessages = await groupHistory(102);
+    assert.equal(groupMessages.messages.length, 2);
+    assert.equal(groupMessages.messages[0].text, "Crew session at six?");
+    assert.equal(groupMessages.messages[0].mine, false);
+    assert.equal(groupMessages.messages[1].mine, true);
+    assert.ok(groupMessages.messages[0].name);
+    await post(103, { action: "join_group", group });
+    assert.equal((await groupHistory(103)).messages.length, 2);
+    await mf.dispose();
+    mf = new Miniflare(options);
+    assert.equal(
+      (await groupHistory(103)).messages.length,
+      2,
+      "group messages persist after restart",
+    );
+    await post(103, { action: "block", peer: guest.me.id });
+    assert.equal(
+      (await state(103)).groups.length,
+      0,
+      "blocking a private group participant leaves the shared group",
+    );
+    await post(103, { action: "unblock", peer: guest.me.id });
+    await post(102, { action: "leave_group", group });
+    await groupHistory(102, 404);
+    await post(
+      102,
+      {
+        action: "group_send",
+        group,
+        text: "Left",
+        messageId: crypto.randomUUID(),
+      },
+      404,
+    );
+    await post(101, { action: "close_group", group });
+    assert.equal((await state(103)).groups.length, 0);
+    await groupHistory(101, 404);
+    const declined = crypto.randomUUID();
+    await create(declined);
+    await post(102, { action: "decline_group", group: declined });
+    assert.equal((await state(102)).groups.length, 0);
+    // Blocking another participant leaves shared groups and revokes access immediately.
+    await post(103, { action: "join_group", group: declined });
+    await post(103, { action: "block", peer: owner.me.id });
+    assert.equal((await state(103)).groups.length, 0);
+    assert.equal(
+      (
+        await call("/api/gymmaster/connect?group=" + declined, {
+          member: true,
+          id: 103,
+        })
+      ).status,
+      404,
+    );
     console.log(
-      "PASS Connect: private default, opt-in discovery, authenticated identity, CSRF, consent before messaging, scoped history, idempotent sends, persistence, block/unblock, decline and cancellation.",
+      "PASS Connect: private default, opt-in discovery, authenticated identity, CSRF, consent before messaging, scoped history, idempotent sends, persistence, block/unblock, decline, cancellation and invite-only group chats.",
     );
   } finally {
     await mf.dispose();

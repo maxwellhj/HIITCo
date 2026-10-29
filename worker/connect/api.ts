@@ -57,6 +57,9 @@ export async function connectApi(
         Object.keys(body).some(
           (k) =>
             ![
+              "group",
+              "members",
+              "groupName",
               "action",
               "peer",
               "public",
@@ -69,6 +72,12 @@ export async function connectApi(
         return apiJson({ error: "invalid_request" }, 400);
       if (
         ![
+          "create_group",
+          "join_group",
+          "decline_group",
+          "leave_group",
+          "close_group",
+          "group_send",
           "privacy",
           "request",
           "accept",
@@ -84,11 +93,21 @@ export async function connectApi(
     } else {
       if (
         [...url.searchParams.keys()].some(
-          (k) => !["peer", "before"].includes(k),
+          (k) => !["peer", "before", "group"].includes(k),
         )
       )
         return apiJson({ error: "invalid_request" }, 400);
-      if (url.searchParams.has("peer"))
+      if (url.searchParams.has("peer") && url.searchParams.has("group"))
+        return apiJson({ error: "invalid_request" }, 400);
+      if (url.searchParams.has("group"))
+        body = {
+          action: "group_messages",
+          group: url.searchParams.get("group"),
+          before: url.searchParams.has("before")
+            ? Number(url.searchParams.get("before"))
+            : undefined,
+        };
+      else if (url.searchParams.has("peer"))
         body = {
           action: "messages",
           peer: url.searchParams.get("peer"),
@@ -99,12 +118,44 @@ export async function connectApi(
       else if (url.search) return apiJson({ error: "invalid_request" }, 400);
     }
     if (
-      body.action === "messages" &&
+      (body.action === "messages" || body.action === "group_messages") &&
       body.before !== undefined &&
       (!Number.isSafeInteger(body.before) || Number(body.before) <= 0)
     )
       return apiJson({ error: "invalid_request" }, 400);
     const internal: Record<string, unknown> = { ...body, actor, name };
+    if (body.action === "create_group") {
+      if (
+        typeof body.group !== "string" ||
+        !/^[a-f0-9-]{36}$/.test(body.group) ||
+        typeof body.groupName !== "string" ||
+        !body.groupName.trim() ||
+        body.groupName.trim().length > 60
+      )
+        return apiJson({ error: "invalid_request" }, 400);
+      internal.groupName = await sealTraining(
+        { name: body.groupName.trim() },
+        secret,
+        "connect.group:" + body.group,
+      );
+    }
+    if (body.action === "group_send") {
+      if (
+        typeof body.group !== "string" ||
+        !/^[a-f0-9-]{36}$/.test(body.group) ||
+        typeof body.text !== "string" ||
+        !body.text.trim() ||
+        body.text.trim().length > 2000
+      )
+        return apiJson({ error: "invalid_request" }, 400);
+      internal.sealed = await sealTraining(
+        { text: body.text.trim() },
+        secret,
+        "connect.group-message:" + body.group,
+      );
+      internal.createdAt = new Date().toISOString();
+      delete internal.text;
+    }
     if (body.action === "send") {
       if (
         typeof body.text !== "string" ||
@@ -154,6 +205,62 @@ export async function connectApi(
             }),
           ),
         );
+    }
+    if (body.action === "state") {
+      data.groups = await Promise.all(
+        data.groups.map(
+          async (g: {
+            id: string;
+            name: string;
+            owner: string;
+            status: string;
+            members: { id: string; name: string }[];
+          }) => {
+            const members = await Promise.all(
+              g.members.map(async (p) => ({
+                id: p.id,
+                name: (
+                  await openTraining(p.name, secret, "connect.profile:" + p.id)
+                ).name,
+              })),
+            );
+            return {
+              ...g,
+              name: (
+                await openTraining(g.name, secret, "connect.group:" + g.id)
+              ).name,
+              members,
+            };
+          },
+        ),
+      );
+    }
+    if (body.action === "group_messages") {
+      data.messages = await Promise.all(
+        data.messages.map(
+          async (m: {
+            seq: number;
+            sender: string;
+            name: string;
+            sealed: string;
+            created_at: string;
+          }) => ({
+            id: m.seq,
+            mine: m.sender === actor,
+            name: (
+              await openTraining(m.name, secret, "connect.profile:" + m.sender)
+            ).name,
+            text: (
+              await openTraining(
+                m.sealed,
+                secret,
+                "connect.group-message:" + body.group,
+              )
+            ).text,
+            createdAt: m.created_at,
+          }),
+        ),
+      );
     }
     if (body.action === "messages") {
       const pair = [actor, body.peer].sort().join(":");
