@@ -1,6 +1,8 @@
 /**
  * HIIT Co. public, read-only metrics feed. Revenue is never returned.
  * Deploy as Web app: Execute as Me; access Anyone.
+ * Enable the Google Sheets advanced service (identifier Sheets, v4).
+ * OAuth scope: https://www.googleapis.com/auth/spreadsheets.readonly
  * No spreadsheet writes, credentials or arbitrary file/range parameters.
  */
 function doGet(e) {
@@ -10,14 +12,15 @@ function doGet(e) {
   }
   var result;
   try {
-    var book = SpreadsheetApp.openById('14IEcmqu5-PClJX4zZdoY4Wg9dUkwQsr_X6a0rKJ2bD4');
+    var spreadsheetId = '14IEcmqu5-PClJX4zZdoY4Wg9dUkwQsr_X6a0rKJ2bD4';
     var tabs = ['24/25 Dashboard', '25/26Dashboard', '26/27Dashboard'];
     var all = [];
     tabs.forEach(function(name) {
-      var sheet = book.getSheetByName(name);
-      if (!sheet) throw new Error('Missing dashboard tab');
-      var range = sheet.getRange(1, 1, 40, Math.min(sheet.getLastColumn(), 53));
-      all = all.concat(readDashboard(range.getValues(), range.getDisplayValues(), name));
+      var range = "'" + name.replace(/'/g, "''") + "'!A1:BA40";
+      var raw = Sheets.Spreadsheets.Values.get(spreadsheetId, range, {valueRenderOption:'UNFORMATTED_VALUE',dateTimeRenderOption:'SERIAL_NUMBER'}).values || [];
+      var formatted = Sheets.Spreadsheets.Values.get(spreadsheetId, range, {valueRenderOption:'FORMATTED_VALUE'}).values || [];
+      if (!raw.length || !formatted.length) throw new Error('Missing dashboard values');
+      all = all.concat(readDashboard(raw, formatted, name));
     });
     var today = Utilities.formatDate(new Date(), 'Pacific/Auckland', 'yyyy-MM-dd');
     result = buildMetricsFeed(all, today);
