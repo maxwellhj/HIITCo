@@ -14,7 +14,7 @@ import {
 import { Brand, Card } from "../components/UI";
 import { Events } from "../pages/Events";
 import { Skills } from "../pages/Skills";
-import { Messages } from "../pages/Messages";
+import { Connect } from "../pages/Connect";
 import { formatDate } from "../domain/attendance";
 import { parseDailyVisits, type DailyVisits } from "../domain/gymmasterVisits";
 import type { GymMasterMemberProfile } from "../domain/gymmasterProfile";
@@ -24,23 +24,23 @@ import { MemberLogin } from "./MemberLogin";
 import type { StreakSummary } from "./attendance";
 import { MemberDashboard } from "./MemberDashboard";
 type Page =
-  "home" | "events" | "log" | "progress" | "messages" | "account" | "skills";
+  "home" | "events" | "log" | "progress" | "connect" | "account" | "skills";
 const navigation = [
   { id: "home", label: "Home", icon: Home },
   { id: "events", label: "Events", icon: CalendarDays },
   { id: "log", label: "Log", icon: Pencil },
   { id: "progress", label: "Progress", icon: TrendingUp },
-  { id: "messages", label: "Messages", icon: MessageCircle },
+  { id: "connect", label: "Connect", icon: MessageCircle },
 ] as const;
 function route(): Page {
   const hash = location.hash.slice(1).split("/")[0];
-  if (hash === "connect") return "account";
+  if (hash === "messages") return "connect";
   return [
     "home",
     "events",
     "log",
     "progress",
-    "messages",
+    "connect",
     "account",
     "skills",
   ].includes(hash)
@@ -303,7 +303,7 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
     events: "What’s on at HIIT Co.",
     skills: "Skills Library",
     log: "Your training log",
-    messages: "In your corner",
+    connect: "Connect",
     account: "Your account",
   };
   return (
@@ -431,8 +431,8 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
             <Events />
           ) : page === "skills" ? (
             <Skills />
-          ) : page === "messages" ? (
-            <Messages />
+          ) : page === "connect" ? (
+            <Connect />
           ) : logRoute === "#log/chow" ? (
             <MemberChow />
           ) : (
@@ -442,10 +442,10 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
               route={logRoute}
             />
           )}
-          {(page === "home" || page === "events" || page === "messages") && (
+          {(page === "home" || page === "events" || page === "connect") && (
             <p className="member-source small muted">
-              Workouts and events come from the club. Messages are still demo
-              content.
+              Workouts and events come from the club. Connect is available to
+              signed-in members.
             </p>
           )}
         </main>

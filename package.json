@@ -11,6 +11,7 @@
     "dev:worker": "wrangler dev --local",
     "deploy:check": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
+    "test:connect": "node scripts/check-connect.cjs",
     "test:skills": "node scripts/check-skills.cjs",
     "test:club": "node scripts/check-club.cjs",
     "test:member-goals": "node scripts/check-member-goals.cjs",

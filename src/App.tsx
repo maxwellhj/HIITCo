@@ -45,7 +45,7 @@ const pages = [
   { id: "events", label: "Events", icon: CalendarDays },
   { id: "log", label: "Log", icon: Pencil },
   { id: "progress", label: "Progress", icon: TrendingUp },
-  { id: "messages", label: "Messages", icon: MessageCircle },
+  { id: "messages", label: "Connect", icon: MessageCircle },
 ] as const;
 function App() {
   const [data, setData] = useState<DemoData | null>(null),
@@ -216,7 +216,7 @@ function App() {
             <span className="demo-badge">DEMO EXPERIENCE</span>
             <button
               className="icon-button club-messages"
-              aria-label="View club messages"
+              aria-label="Open Connect"
               onClick={() => navigate("messages")}
             >
               <Bell size={20} />

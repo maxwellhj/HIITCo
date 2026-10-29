@@ -1,3 +1,4 @@
+import { initConnect, connectStore } from "../connect/store";
 import { apiJson, limitedText } from "../gymmaster/auth";
 interface Cursor<T> {
   one(): T;
@@ -21,6 +22,7 @@ const stickerId = (value: unknown): value is string =>
 /** Only reached through a private Durable Object binding; never routed from the public Worker. */
 export class ControlStore {
   constructor(private state: State) {
+    initConnect(state.storage.sql);
     for (const sql of [
       "CREATE TABLE IF NOT EXISTS attendance (member_key TEXT PRIMARY KEY,sealed TEXT NOT NULL,updated_at TEXT NOT NULL)",
       "CREATE TABLE IF NOT EXISTS event_responses (member_key TEXT NOT NULL,event_id TEXT NOT NULL,sealed TEXT NOT NULL,PRIMARY KEY(member_key,event_id))",
@@ -42,6 +44,7 @@ export class ControlStore {
     const url = new URL(request.url),
       sql = this.state.storage.sql;
     try {
+      if (url.pathname === "/connect") return await connectStore(request, sql);
       if (request.method === "GET") {
         if (url.pathname === "/attendance") {
           const id = url.searchParams.get("id");
