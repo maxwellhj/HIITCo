@@ -270,6 +270,25 @@ export async function controlApi(
       await controlData(env, "/setting", { id: "reports-key", sealed });
       return apiJson({ connected: true });
     }
+    if (path === "/api/control/stickers/category") {
+      if (!isId(body.id) || !["milestones", "events"].includes(body.category))
+        return apiJson({ error: "invalid_sticker" }, 400);
+      const data = await controlData(env, "/stickers");
+      const row = data.rows.find((r: { id: string }) => r.id === body.id);
+      if (!row) return apiJson({ error: "not_found" }, 404);
+      const meta = await openTraining(
+        row.sealed,
+        env.GYMMASTER_API_KEY,
+        "control.sticker:" + body.id,
+      );
+      const sealed = await sealTraining(
+        { ...meta, category: body.category },
+        env.GYMMASTER_API_KEY,
+        "control.sticker:" + body.id,
+      );
+      await controlData(env, "/sticker-category", { id: body.id, sealed });
+      return apiJson({ saved: true });
+    }
     if (path === "/api/control/stickers") {
       if (
         !isId(body.id) ||
@@ -278,6 +297,8 @@ export async function controlApi(
         body.name.length > 60 ||
         typeof body.description !== "string" ||
         body.description.length > 200 ||
+        (body.category !== undefined &&
+          !["milestones", "events"].includes(body.category)) ||
         !validateArtwork(body.mime, body.image)
       )
         return apiJson({ error: "invalid_sticker" }, 400);
@@ -285,6 +306,7 @@ export async function controlApi(
         id: body.id,
         name: body.name.trim(),
         description: body.description.trim(),
+        category: body.category ?? "milestones",
         createdAt: new Date().toISOString(),
       };
       const [sealed, art] = await Promise.all([

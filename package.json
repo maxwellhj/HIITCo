@@ -11,6 +11,7 @@
     "dev:worker": "wrangler dev --local",
     "deploy:check": "wrangler deploy --dry-run",
     "deploy": "wrangler deploy",
+    "test:sticker-categories": "node scripts/check-sticker-categories.cjs",
     "test:notifications": "node scripts/check-notifications.cjs",
     "test:connect": "node scripts/check-connect.cjs",
     "test:skills": "node scripts/check-skills.cjs",

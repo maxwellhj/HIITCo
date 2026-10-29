@@ -28,7 +28,12 @@ import {
   type TrainingLogData,
 } from "../domain/training";
 import { parseChowLog, type ChowLogData } from "../domain/chow";
-import type { ActivityItem, AppMember, ClubSticker } from "../domain/control";
+import type {
+  ActivityItem,
+  AppMember,
+  ClubSticker,
+  StickerCategory,
+} from "../domain/control";
 import { controlApi, ControlError } from "./api";
 const name = (member: AppMember) =>
   `${member.firstName} ${member.lastName}`.trim();
@@ -890,12 +895,21 @@ function StickerManager({
 }) {
   const [name, setName] = useState(""),
     [description, setDescription] = useState(""),
+    [category, setCategory] = useState<StickerCategory>("milestones"),
+    [collectionCategory, setCollectionCategory] = useState<
+      "all" | StickerCategory
+    >("all"),
     [file, setFile] = useState<File | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   const uploadId = useRef(crypto.randomUUID()),
     form = useRef<HTMLFormElement>(null);
+  const visibleStickers = stickers.filter(
+    (s) =>
+      collectionCategory === "all" ||
+      (s.category ?? "milestones") === collectionCategory,
+  );
   return (
     <div className="control-sticker-layout">
       <Card>
@@ -927,12 +941,14 @@ function StickerManager({
                 id: uploadId.current,
                 name,
                 description,
+                category,
                 mime: file.type,
                 image: btoa(binary),
               });
               setNotice("Sticker added. You can now unlock it for members.");
               setName("");
               setDescription("");
+              setCategory("milestones");
               setFile(null);
               uploadId.current = crypto.randomUUID();
               form.current?.reset();
@@ -968,6 +984,16 @@ function StickerManager({
               />
             </label>
             <label>
+              Achievement category
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value as StickerCategory)}
+              >
+                <option value="milestones">Milestone</option>
+                <option value="events">Event</option>
+              </select>
+            </label>
+            <label>
               Sticker artwork
               <input
                 type="file"
@@ -996,20 +1022,79 @@ function StickerManager({
       </Card>
       <Card>
         <h2>Sticker collection</h2>
-        {stickers.length ? (
+        <div
+          className="trophy-filters"
+          role="group"
+          aria-label="Sticker collection category"
+        >
+          {(["all", "milestones", "events"] as const).map((value) => (
+            <button
+              key={value}
+              className={collectionCategory === value ? "primary" : "secondary"}
+              aria-pressed={collectionCategory === value}
+              onClick={() => setCollectionCategory(value)}
+            >
+              {value === "all"
+                ? "All"
+                : value === "milestones"
+                  ? "Milestones"
+                  : "Events"}
+            </button>
+          ))}
+        </div>
+        <p className="small muted">
+          Choose a category for each sticker. Existing stickers appear under
+          Milestones until changed.
+        </p>
+        {visibleStickers.length ? (
           <div className="sticker-grid">
-            {stickers.map((s) => (
+            {visibleStickers.map((s) => (
               <div className="collectable-sticker" key={s.id}>
                 <img src={"/api/control/art/" + s.id} alt={s.name} />
                 <strong>{s.name}</strong>
                 <p>{s.description}</p>
+                <label className="sticker-category-control">
+                  Category
+                  <select
+                    aria-label={`Category for ${s.name}`}
+                    value={s.category ?? "milestones"}
+                    disabled={!available || busy}
+                    onChange={async (e) => {
+                      setBusy(true);
+                      setError("");
+                      setNotice("");
+                      try {
+                        await controlApi("stickers/category", {
+                          id: s.id,
+                          category: e.target.value,
+                        });
+                        setNotice("Sticker category updated.");
+                        onChanged();
+                      } catch (err) {
+                        setError(
+                          "Couldn’t update this sticker’s category. Please try again.",
+                        );
+                        onError(err);
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    <option value="milestones">Milestone</option>
+                    <option value="events">Event</option>
+                  </select>
+                </label>
               </div>
             ))}
           </div>
         ) : (
           <div className="control-empty">
             <Trophy size={32} />
-            <h3>Your club’s digital stickers</h3>
+            <h3>
+              {collectionCategory === "all"
+                ? "Your club’s digital stickers"
+                : `No ${collectionCategory === "events" ? "event" : "milestone"} stickers yet`}
+            </h3>
             <p>
               Your uploaded sticker artwork will appear here. No sample awards
               have been added.

@@ -299,6 +299,25 @@ export class ControlStore {
         );
         return apiJson({ saved: true });
       }
+      if (url.pathname === "/sticker-category") {
+        if (
+          !stickerId(body.id) ||
+          typeof body.sealed !== "string" ||
+          body.sealed.length > 8000
+        )
+          throw Error();
+        if (
+          !sql.exec("SELECT id FROM stickers WHERE id=?", body.id).toArray()
+            .length
+        )
+          return apiJson({ error: "not_found" }, 404);
+        sql.exec(
+          "UPDATE stickers SET sealed=? WHERE id=?",
+          body.sealed,
+          body.id,
+        );
+        return apiJson({ saved: true });
+      }
       if (url.pathname === "/event-response") {
         if (
           !key(body.memberKey) ||

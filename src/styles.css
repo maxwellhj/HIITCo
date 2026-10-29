@@ -3226,3 +3226,5 @@ td > svg {
 .app-update-notice > div {display:flex;align-items:center;gap:16px;}
 @media(max-width:760px){.app-update-notice{left:14px;right:14px;bottom:calc(96px + env(safe-area-inset-bottom,0px));max-width:none;}}
 .event-calendar-links h4 {flex-basis:100%;margin:0 0 2px;}
+
+.trophy-filters{display:flex;gap:8px;margin:18px 0;flex-wrap:wrap}.trophy-filters button{padding:10px 16px;min-height:42px;font-size:13px}.sticker-category-control{display:grid;gap:6px;font-size:12px;text-align:left;width:100%;margin-top:10px}.sticker-category-control select{width:100%;min-width:0;padding:10px;font-size:13px}

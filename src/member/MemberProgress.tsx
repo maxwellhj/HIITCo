@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ArrowRight, LockKeyhole, Trophy, TrendingUp } from "lucide-react";
 import { Card } from "../components/UI";
 import { TrainingChart } from "../components/TrainingChart";
-import type { ClubSticker } from "../domain/control";
+import type { ClubSticker, StickerCategory } from "../domain/control";
 import { dateKey, formatDate } from "../domain/attendance";
 import {
   exerciseProgress,
@@ -19,6 +19,7 @@ export function TrophyRoom() {
     } | null>(null),
     [error, setError] = useState("");
   const [attempt, setAttempt] = useState(0);
+  const [category, setCategory] = useState<"all" | StickerCategory>("all");
   useEffect(() => {
     let active = true;
     let abort: AbortController | null = null;
@@ -70,15 +71,19 @@ export function TrophyRoom() {
     };
   }, [attempt]);
   const earned = new Set(data?.earnedStickerIds ?? []);
-  const stickers = [...(data?.stickers ?? [])].sort(
-    (a, b) =>
-      Number(earned.has(b.id)) - Number(earned.has(a.id)) ||
-      a.name.localeCompare(b.name, "en-NZ", {
-        sensitivity: "base",
-        numeric: true,
-      }) ||
-      a.id.localeCompare(b.id),
-  );
+  const stickers = [...(data?.stickers ?? [])]
+    .filter(
+      (s) => category === "all" || (s.category ?? "milestones") === category,
+    )
+    .sort(
+      (a, b) =>
+        Number(earned.has(b.id)) - Number(earned.has(a.id)) ||
+        a.name.localeCompare(b.name, "en-NZ", {
+          sensitivity: "base",
+          numeric: true,
+        }) ||
+        a.id.localeCompare(b.id),
+    );
   return (
     <Card className="trophy-room">
       <div className="section-top">
@@ -87,9 +92,29 @@ export function TrophyRoom() {
           Trophy Room
         </h2>
         <span className="small muted">
-          {data ? data.stickers.filter((s) => earned.has(s.id)).length : "—"}{" "}
+          {data ? stickers.filter((s) => earned.has(s.id)).length : "—"}{" "}
           collected
         </span>
+      </div>
+      <div
+        className="trophy-filters"
+        role="group"
+        aria-label="Achievement category"
+      >
+        {(["all", "milestones", "events"] as const).map((value) => (
+          <button
+            key={value}
+            className={category === value ? "primary" : "secondary"}
+            aria-pressed={category === value}
+            onClick={() => setCategory(value)}
+          >
+            {value === "all"
+              ? "All"
+              : value === "milestones"
+                ? "Milestones"
+                : "Events"}
+          </button>
+        ))}
       </div>
       {error ? (
         <>
@@ -105,7 +130,7 @@ export function TrophyRoom() {
         </>
       ) : !data ? (
         <p role="status">Loading your stickers…</p>
-      ) : data.stickers.length ? (
+      ) : stickers.length ? (
         <div className="sticker-grid">
           {stickers.map((s) => (
             <div
@@ -130,8 +155,16 @@ export function TrophyRoom() {
           <div className="sticker-outline" aria-hidden="true">
             <Trophy size={44} />
           </div>
-          <h3>Room for your next achievement</h3>
-          <p>Your earned HIIT Co. stickers will be collected here.</p>
+          <h3>
+            {category === "all"
+              ? "Room for your next achievement"
+              : `No ${category === "events" ? "event" : "milestone"} stickers yet`}
+          </h3>
+          <p>
+            {category === "all"
+              ? "Your earned HIIT Co. stickers will be collected here."
+              : "Choose All to see the rest of your collection."}
+          </p>
         </div>
       )}
     </Card>

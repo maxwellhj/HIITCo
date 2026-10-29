@@ -8,7 +8,9 @@ export interface AppMember {
   totalVisits: number | null;
   lastSeen: string;
 }
+export type StickerCategory = "milestones" | "events";
 export interface ClubSticker {
+  category?: StickerCategory;
   id: string;
   name: string;
   description: string;
