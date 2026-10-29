@@ -1,3 +1,8 @@
+import {
+  defaultDisplayName,
+  validDisplayName,
+} from "../../src/domain/connectProfile";
+import { validateArtwork } from "../control/api";
 import { apiJson, limitedText, type AuthEnv } from "../gymmaster/auth";
 import { readSession, clearSessionCookie } from "../gymmaster/session";
 import { getAppMember, type ControlDataEnv } from "../control/data";
@@ -7,7 +12,10 @@ export async function connectApi(
   env: AuthEnv & ControlDataEnv,
 ): Promise<Response | null> {
   const url = new URL(request.url);
-  if (url.pathname !== "/api/gymmaster/connect") return null;
+  const photoRequest = url.pathname === "/api/gymmaster/connect/photo";
+  if (url.pathname !== "/api/gymmaster/connect" && !photoRequest) return null;
+  if (photoRequest && request.method !== "GET")
+    return apiJson({ error: "method_not_allowed" }, 405);
   if (!["GET", "POST"].includes(request.method))
     return apiJson({ error: "method_not_allowed" }, 405);
   if (
@@ -34,7 +42,10 @@ export async function connectApi(
     );
     if (!member) return apiJson({ error: "profile_required" }, 409);
     const name = await sealTraining(
-      { name: `${member.firstName} ${member.lastName}`.trim() },
+      {
+        name: defaultDisplayName(member.firstName, member.lastName),
+        format: 2,
+      },
       secret,
       "connect.profile:" + actor,
     );
@@ -46,7 +57,7 @@ export async function connectApi(
       )
         return apiJson({ error: "invalid_request" }, 400);
       try {
-        body = JSON.parse(await limitedText(request.body, 12000));
+        body = JSON.parse(await limitedText(request.body, 360000));
       } catch {
         return apiJson({ error: "invalid_request" }, 400);
       }
@@ -57,6 +68,8 @@ export async function connectApi(
         Object.keys(body).some(
           (k) =>
             ![
+              "displayName",
+              "photo",
               "group",
               "members",
               "groupName",
@@ -72,6 +85,7 @@ export async function connectApi(
         return apiJson({ error: "invalid_request" }, 400);
       if (
         ![
+          "profile_save",
           "create_group",
           "join_group",
           "decline_group",
@@ -90,6 +104,17 @@ export async function connectApi(
         ].includes(String(body.action))
       )
         return apiJson({ error: "invalid_request" }, 400);
+    } else if (photoRequest) {
+      if (
+        [...url.searchParams.keys()].some((k) => !["member", "v"].includes(k))
+      )
+        return apiJson({ error: "invalid_request" }, 400);
+      body = { action: "photo", peer: url.searchParams.get("member") };
+    } else if (
+      url.searchParams.get("profile") === "me" &&
+      [...url.searchParams.keys()].length === 1
+    ) {
+      body = { action: "profile_get" };
     } else {
       if (
         [...url.searchParams.keys()].some(
@@ -124,6 +149,38 @@ export async function connectApi(
     )
       return apiJson({ error: "invalid_request" }, 400);
     const internal: Record<string, unknown> = { ...body, actor, name };
+    if (body.action === "profile_save") {
+      if (body.displayName !== null && !validDisplayName(body.displayName))
+        return apiJson({ error: "invalid_display_name" }, 400);
+      internal.display =
+        body.displayName === null
+          ? null
+          : await sealTraining(
+              { name: String(body.displayName).trim() },
+              secret,
+              "connect.display:" + actor,
+            );
+      delete internal.displayName;
+      if (body.photo !== undefined) {
+        if (body.photo === null) {
+          internal.photo = null;
+        } else {
+          const photo = body.photo as { mime?: unknown; image?: unknown };
+          if (
+            !photo ||
+            typeof photo !== "object" ||
+            !validateArtwork(photo.mime, photo.image)
+          )
+            return apiJson({ error: "invalid_photo" }, 400);
+          internal.photo = await sealTraining(
+            { mime: photo.mime, image: photo.image },
+            secret,
+            "connect.photo:" + actor,
+          );
+          internal.version = crypto.randomUUID();
+        }
+      }
+    }
     if (body.action === "create_group") {
       if (
         typeof body.group !== "string" ||
@@ -185,83 +242,111 @@ export async function connectApi(
     );
     const data = (await response.json()) as Record<string, any>;
     if (!response.ok) return apiJson(data, response.status);
+    const avatar = (id: string, version: unknown) =>
+      typeof version === "string"
+        ? `/api/gymmaster/connect/photo?member=${id}&v=${version}`
+        : null;
+    async function person(p: {
+      id: string;
+      name: string;
+      display?: string | null;
+      photoVersion?: string | null;
+    }) {
+      let name: string;
+      if (p.display)
+        name = (
+          await openTraining(p.display, secret, "connect.display:" + p.id)
+        ).name;
+      else {
+        const stored = await openTraining(
+          p.name,
+          secret,
+          "connect.profile:" + p.id,
+        );
+        const parts = String(stored.name).trim().split(/\s+/);
+        name =
+          stored.format === 2
+            ? stored.name
+            : defaultDisplayName(
+                parts[0],
+                parts.length > 1 ? parts.at(-1)! : "",
+              );
+      }
+      return { id: p.id, name, photo: avatar(p.id, p.photoVersion) };
+    }
+    if (body.action === "photo") {
+      const photo = await openTraining(
+        data.photo,
+        secret,
+        "connect.photo:" + body.peer,
+      );
+      if (!validateArtwork(photo.mime, photo.image)) throw Error();
+      return new Response(
+        Uint8Array.from(atob(photo.image), (c) => c.charCodeAt(0)),
+        {
+          headers: {
+            "Content-Type": photo.mime,
+            "Cache-Control": "no-store, private",
+            "X-Content-Type-Options": "nosniff",
+            "Cross-Origin-Resource-Policy": "same-origin",
+          },
+        },
+      );
+    }
+    if (body.action === "profile_get") {
+      const me = data.me;
+      return apiJson({
+        id: actor,
+        displayName: me.display
+          ? (await openTraining(me.display, secret, "connect.display:" + actor))
+              .name
+          : defaultDisplayName(member.firstName, member.lastName),
+        defaultName: defaultDisplayName(member.firstName, member.lastName),
+        customName: !!me.display,
+        photo: avatar(actor, me.photoVersion),
+        public: me.public,
+      });
+    }
     if (body.action === "state") {
       for (const list of ["people", "edges", "blocked"])
         data[list] = await Promise.all(
-          data[list].map(
-            async (p: {
-              id: string;
-              name: string;
-              sender?: string;
-              status?: string;
-            }) => ({
-              id: p.id,
-              name: (
-                await openTraining(p.name, secret, "connect.profile:" + p.id)
-              ).name,
-              ...(p.status
-                ? { status: p.status, incoming: p.sender !== actor }
-                : {}),
-            }),
-          ),
+          data[list].map(async (p: any) => ({
+            ...(await person(p)),
+            ...(p.status
+              ? { status: p.status, incoming: p.sender !== actor }
+              : {}),
+          })),
         );
-    }
-    if (body.action === "state") {
       data.groups = await Promise.all(
-        data.groups.map(
-          async (g: {
-            id: string;
-            name: string;
-            owner: string;
-            status: string;
-            members: { id: string; name: string }[];
-          }) => {
-            const members = await Promise.all(
-              g.members.map(async (p) => ({
-                id: p.id,
-                name: (
-                  await openTraining(p.name, secret, "connect.profile:" + p.id)
-                ).name,
-              })),
-            );
-            return {
-              ...g,
-              name: (
-                await openTraining(g.name, secret, "connect.group:" + g.id)
-              ).name,
-              members,
-            };
-          },
-        ),
+        data.groups.map(async (g: any) => ({
+          ...g,
+          name: (await openTraining(g.name, secret, "connect.group:" + g.id))
+            .name,
+          members: await Promise.all(g.members.map(person)),
+        })),
       );
     }
-    if (body.action === "group_messages") {
+    if (body.action === "group_messages")
       data.messages = await Promise.all(
-        data.messages.map(
-          async (m: {
-            seq: number;
-            sender: string;
-            name: string;
-            sealed: string;
-            created_at: string;
-          }) => ({
-            id: m.seq,
-            mine: m.sender === actor,
-            name: (
-              await openTraining(m.name, secret, "connect.profile:" + m.sender)
-            ).name,
-            text: (
-              await openTraining(
-                m.sealed,
-                secret,
-                "connect.group-message:" + body.group,
-              )
-            ).text,
-            createdAt: m.created_at,
-          }),
-        ),
+        data.messages.map(async (m: any) => ({
+          mine: m.sender === actor,
+          ...(await person({
+            id: m.sender,
+            name: m.name,
+            display: m.display,
+            photoVersion: m.photoVersion,
+          })),
+          id: m.seq,
+          text: (
+            await openTraining(
+              m.sealed,
+              secret,
+              "connect.group-message:" + body.group,
+            )
+          ).text,
+          createdAt: m.created_at,
+        })),
       );
-    }
     if (body.action === "messages") {
       const pair = [actor, body.peer].sort().join(":");
       data.messages = await Promise.all(

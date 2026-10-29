@@ -461,8 +461,113 @@ const { join, resolve } = require("node:path");
       ).status,
       404,
     );
+    for (const id of [201, 202])
+      await getJson("/api/gymmaster/profile", { member: true, id });
+    const ownerProfile = () =>
+      getJson("/api/gymmaster/connect?profile=me", { member: true, id: 201 });
+    const initialProfile = await ownerProfile();
+    assert.equal(initialProfile.displayName, "Jamie E.");
+    assert.equal(initialProfile.customName, false);
+    const avatar = {
+      mime: "image/png",
+      image:
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jVxkAAAAASUVORK5CYII=",
+    };
+    await post(201, {
+      action: "profile_save",
+      displayName: "Morning legend",
+      photo: avatar,
+    });
+    const savedProfile = await ownerProfile();
+    assert.equal(savedProfile.displayName, "Morning legend");
+    assert.equal(savedProfile.public, false);
+    assert.ok(savedProfile.photo);
+    assert.equal(
+      (await call(savedProfile.photo, { member: true, id: 201 })).status,
+      200,
+    );
+    assert.equal(
+      (await call(savedProfile.photo, { member: true, id: 202 })).status,
+      404,
+      "private photos are never served to other members",
+    );
+    assert.equal((await call(savedProfile.photo)).status, 401);
+    await post(201, { action: "privacy", public: true });
+    let publicPerson = (await state(202)).people.find(
+      (p) => p.id === savedProfile.id,
+    );
+    assert.equal(publicPerson.name, "Morning legend");
+    assert.ok(publicPerson.photo);
+    const photoResponse = await call(savedProfile.photo, {
+      member: true,
+      id: 202,
+    });
+    assert.equal(photoResponse.status, 200);
+    assert.ok(photoResponse.headers.get("Cache-Control").includes("no-store"));
+    assert.equal(photoResponse.headers.get("Content-Type"), "image/png");
+    await post(202, { action: "request", peer: savedProfile.id });
+    const viewerId = (await state(202)).me.id;
+    await post(201, { action: "accept", peer: viewerId });
+    await post(201, { action: "privacy", public: false });
+    const friendProfile = (await state(202)).edges.find(
+      (p) => p.id === savedProfile.id,
+    );
+    assert.equal(friendProfile.name, "Morning legend");
+    assert.equal(friendProfile.photo, null);
+    assert.equal(
+      (await call(savedProfile.photo, { member: true, id: 202 })).status,
+      404,
+      "even accepted connections cannot load a private photo using its old URL",
+    );
+    await mf.dispose();
+    mf = new Miniflare(options);
+    assert.equal((await ownerProfile()).displayName, "Morning legend");
+    assert.ok((await ownerProfile()).photo);
+    await post(201, { action: "profile_save", displayName: null });
+    assert.equal((await ownerProfile()).displayName, "Jamie E.");
+    assert.ok((await ownerProfile()).photo, "name reset preserves the photo");
+    await post(201, { action: "privacy", public: true });
+    assert.equal(
+      (await state(202)).people.find((p) => p.id === savedProfile.id).name,
+      "Jamie E.",
+    );
+    await post(202, { action: "block", peer: savedProfile.id });
+    assert.equal(
+      (await call(savedProfile.photo, { member: true, id: 202 })).status,
+      404,
+    );
+    await post(
+      201,
+      { action: "profile_save", displayName: "", photo: null },
+      400,
+    );
+    await post(
+      201,
+      { action: "profile_save", displayName: "x".repeat(41) },
+      400,
+    );
+    await post(
+      201,
+      {
+        action: "profile_save",
+        displayName: "Name",
+        photo: { mime: "image/svg+xml", image: avatar.image },
+      },
+      400,
+    );
+    await post(
+      201,
+      { action: "profile_save", displayName: null, actor: viewerId },
+      400,
+    );
+    await post(201, { action: "profile_save", displayName: null, photo: null });
+    assert.equal((await ownerProfile()).photo, null);
+    assert.equal(
+      (await call(savedProfile.photo, { member: true, id: 201 })).status,
+      404,
+    );
     console.log(
-      "PASS Connect: private default, opt-in discovery, authenticated identity, CSRF, consent before messaging, scoped history, idempotent sends, persistence, block/unblock, decline, cancellation and invite-only group chats.",
+      "PASS Connect: private default, opt-in discovery, authenticated identity, CSRF, consent before messaging, scoped history, idempotent sends, persistence, block/unblock, decline, cancellation invite-only group chats and privacy-controlled photos/display names.",
     );
   } finally {
     await mf.dispose();

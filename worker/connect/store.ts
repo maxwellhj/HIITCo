@@ -1,3 +1,4 @@
+import { initProfiles, profileFields, profileStore } from "./profileStore";
 import {
   initGroups,
   listGroups,
@@ -13,6 +14,7 @@ export interface ConnectSql {
 }
 export function initConnect(sql: ConnectSql) {
   initGroups(sql);
+  initProfiles(sql);
   for (const query of [
     "CREATE TABLE IF NOT EXISTS connect_profiles (id TEXT PRIMARY KEY,name TEXT NOT NULL,public INTEGER NOT NULL DEFAULT 0)",
     "CREATE TABLE IF NOT EXISTS connect_edges (a TEXT NOT NULL,b TEXT NOT NULL,sender TEXT NOT NULL,status TEXT NOT NULL,PRIMARY KEY(a,b))",
@@ -28,7 +30,7 @@ const validId = (v: unknown): v is string =>
 export async function connectStore(request: Request, sql: ConnectSql) {
   if (request.method !== "POST")
     return apiJson({ error: "method_not_allowed" }, 405);
-  const body = JSON.parse(await limitedText(request.body, 20000));
+  const body = JSON.parse(await limitedText(request.body, 650000));
   const { actor, action, peer } = body;
   if (
     !validId(actor) ||
@@ -40,6 +42,9 @@ export async function connectStore(request: Request, sql: ConnectSql) {
       "close_group",
       "group_messages",
       "group_send",
+      "profile_get",
+      "profile_save",
+      "photo",
       "state",
       "privacy",
       "request",
@@ -56,7 +61,11 @@ export async function connectStore(request: Request, sql: ConnectSql) {
     return apiJson({ error: "invalid_request" }, 400);
   const bucket = Math.floor(Date.now() / 60000),
     scope =
-      action === "state" || action === "messages" || action === "group_messages"
+      action === "state" ||
+      action === "messages" ||
+      action === "group_messages" ||
+      action === "profile_get" ||
+      action === "photo"
         ? "read"
         : action === "request" || action === "create_group"
           ? "request"
@@ -83,6 +92,8 @@ export async function connectStore(request: Request, sql: ConnectSql) {
     actor,
     body.name,
   );
+  if (["profile_get", "profile_save", "photo"].includes(action))
+    return profileStore(body, sql);
   if (
     [
       "create_group",
@@ -131,12 +142,17 @@ export async function connectStore(request: Request, sql: ConnectSql) {
         actor,
       )
       .toArray();
+    const groups = listGroups(sql, actor);
+    const decorate = (p: Record<string, any>) => ({
+      ...p,
+      ...profileFields(sql, String(p.id)),
+    });
     return apiJson({
       me: { id: actor, public: me.public === 1 },
-      people,
-      edges,
-      blocked,
-      groups: listGroups(sql, actor),
+      people: people.map(decorate),
+      edges: edges.map(decorate),
+      blocked: blocked.map(decorate),
+      groups: groups.map((g) => ({ ...g, members: g.members.map(decorate) })),
     });
   }
   if (!validId(peer) || peer === actor)

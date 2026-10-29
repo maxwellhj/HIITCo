@@ -1,9 +1,10 @@
+import { ConnectAvatar } from "../components/ConnectAvatar";
 import { useEffect, useRef, useState } from "react";
 import { Search, MessageCircle, Send, Plus, ArrowLeft } from "lucide-react";
 import { Card } from "../components/UI";
 import { memberApi, MemberApiError } from "../member/api";
 import "./connect.css";
-type Person = { id: string; name: string };
+type Person = { id: string; name: string; photo?: string | null };
 type Edge = Person & { status: "pending" | "accepted"; incoming: boolean };
 type State = {
   groups: Group[];
@@ -70,18 +71,18 @@ export function Connect() {
         if (mounted.current) {
           setData(next);
           setError("");
-          setSelected((current) =>
-            current &&
-            (current.kind === "group"
-              ? next.groups.some(
-                  (g) => g.id === current.id && g.status === "active",
-                )
-              : next.edges.some(
-                  (e) => e.id === current.id && e.status === "accepted",
-                ))
-              ? current
-              : null,
-          );
+          setSelected((current) => {
+            if (!current) return null;
+            const latest =
+              current.kind === "group"
+                ? next.groups.find(
+                    (g) => g.id === current.id && g.status === "active",
+                  )
+                : next.edges.find(
+                    (e) => e.id === current.id && e.status === "accepted",
+                  );
+            return latest ? { ...latest, kind: current.kind } : null;
+          });
         }
       } catch (e) {
         if (mounted.current) setError(errorText(e));
@@ -99,10 +100,12 @@ export function Connect() {
     };
     const timer = setInterval(update, 15000);
     document.addEventListener("visibilitychange", update);
+    window.addEventListener("hiitco-connect-profile", update);
     return () => {
       mounted.current = false;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", update);
+      window.removeEventListener("hiitco-connect-profile", update);
     };
   }, []);
   async function act(action: string, peer?: string, extra = {}) {
@@ -132,9 +135,7 @@ export function Connect() {
   function row(p: Person, children: React.ReactNode) {
     return (
       <div className="connect-person" key={p.id}>
-        <span className="avatar" aria-hidden="true">
-          {p.name.slice(0, 1).toUpperCase()}
-        </span>
+        <ConnectAvatar name={p.name} photo={p.photo} />
         <strong>{p.name}</strong>
         <div className="connect-actions">{children}</div>
       </div>
@@ -543,7 +544,10 @@ export function Connect() {
                   </summary>
                   {selectedGroup.members.map((p) => (
                     <div key={p.id} className="connect-roster">
-                      <span>{p.id === data.me.id ? "You" : p.name}</span>
+                      <span className="connect-roster-name">
+                        <ConnectAvatar name={p.name} photo={p.photo} />
+                        {p.id === data.me.id ? "You" : p.name}
+                      </span>
                       {p.id !== data.me.id && (
                         <button
                           className="text-button"

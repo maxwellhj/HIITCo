@@ -1,3 +1,4 @@
+import { ProfileButton } from "./ProfileEditor";
 import { MemberProgress } from "./MemberProgress";
 import { MemberChow } from "./ChowScores";
 import { MemberTraining } from "./MemberTraining";
@@ -343,9 +344,7 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
           </a>
           <div className="breadcrumb">Your club. Your pace. Your progress.</div>
           <div className="top-actions">
-            <a href="#account" className="avatar" aria-label="Your account">
-              {initials}
-            </a>
+            <ProfileButton initials={initials} />
             <button className="text-button" onClick={() => void signOut()}>
               Sign out
             </button>

@@ -1,3 +1,4 @@
+import { profileFields } from "./profileStore";
 import { apiJson } from "../gymmaster/auth";
 import type { ConnectSql } from "./store";
 const uuid = (v: unknown): v is string =>
@@ -230,7 +231,10 @@ export function groupStore(
     )
     .toArray();
   return apiJson({
-    messages: rows.slice(0, 50).reverse(),
+    messages: rows
+      .slice(0, 50)
+      .reverse()
+      .map((m) => ({ ...m, ...profileFields(sql, String(m.sender)) })),
     hasMore: rows.length > 50,
   });
 }
