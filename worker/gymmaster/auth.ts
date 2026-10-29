@@ -106,10 +106,52 @@ export async function gymMasterAuth(
           "Set-Cookie": clearSessionCookie(),
         });
   }
-  if (path.endsWith("/logout"))
-    return apiJson({ connected: false }, 200, {
+  if (path.endsWith("/logout")) {
+    const device = request.headers
+      .get("Cookie")
+      ?.split(";")
+      .map((v) => v.trim())
+      .find((v) => v.startsWith("__Host-hiitco-push-device="))
+      ?.split("=")[1];
+    const session = await readSession(request, env.GYMMASTER_API_KEY);
+    if (
+      device &&
+      /^[A-Za-z0-9_-]{43}$/.test(device) &&
+      session &&
+      env.CONTROL_STORE &&
+      env.GYMMASTER_API_KEY
+    ) {
+      try {
+        const { trainingMemberKey } = await import("../training");
+        const response = await env.CONTROL_STORE.get(
+          env.CONTROL_STORE.idFromName("hiitco-control-v1"),
+        ).fetch(
+          new Request("https://control.internal/connect-push-logout", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              actor: await trainingMemberKey(
+                session.memberId,
+                env.GYMMASTER_API_KEY + ":connect-v1",
+              ),
+              deviceId: device,
+            }),
+          }),
+        );
+        if (!response.ok) return failure("logout_unavailable", 503);
+      } catch {
+        return failure("logout_unavailable", 503);
+      }
+    }
+    const response = apiJson({ connected: false }, 200, {
       "Set-Cookie": clearSessionCookie(),
     });
+    response.headers.append(
+      "Set-Cookie",
+      "__Host-hiitco-push-device=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0",
+    );
+    return response;
+  }
   if (!env.GYMMASTER_API_KEY || !env.LOGIN_RATE_LIMITER)
     return failure("connection_unavailable", 503);
   const ip = request.headers.get("CF-Connecting-IP");

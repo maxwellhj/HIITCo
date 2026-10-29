@@ -1,3 +1,9 @@
+import {
+  PushMessageControl,
+  unreadChanged,
+  type UnreadThread,
+  type useMessagePush,
+} from "../member/notifications";
 import { ConnectAvatar } from "../components/ConnectAvatar";
 import { useEffect, useRef, useState } from "react";
 import { Search, MessageCircle, Send, Plus, ArrowLeft } from "lucide-react";
@@ -45,7 +51,13 @@ function errorText(error: unknown) {
   }
   return "Connect couldn’t load. Please try again.";
 }
-export function Connect() {
+export function Connect({
+  unreadThreads = [],
+  push,
+}: {
+  unreadThreads?: UnreadThread[];
+  push?: ReturnType<typeof useMessagePush>;
+}) {
   const [data, setData] = useState<State | null>(null),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -132,11 +144,41 @@ export function Connect() {
       data?.edges.filter((e) => e.status === "pending" && !e.incoming) ?? [],
     friends = data?.edges.filter((e) => e.status === "accepted") ?? [];
   const selectedGroup = data?.groups.find((g) => g.id === selected?.id);
+  function openChat(person: Person, kind: "person" | "group") {
+    setSelected({ ...person, kind });
+    location.hash = `connect/${kind}/${encodeURIComponent(person.id)}`;
+  }
+  useEffect(() => {
+    const select = () => {
+      const [, kind, id] = location.hash.slice(1).split("/");
+      if (!id) {
+        setSelected(null);
+        return;
+      }
+      if (!data) return;
+      const person =
+        kind === "person"
+          ? data.edges.find((e) => e.id === id && e.status === "accepted")
+          : kind === "group"
+            ? data.groups.find((g) => g.id === id && g.status === "active")
+            : null;
+      if (person && (kind === "person" || kind === "group"))
+        setSelected({ ...person, kind });
+    };
+    select();
+    window.addEventListener("hashchange", select);
+    return () => window.removeEventListener("hashchange", select);
+  }, [data]);
   function row(p: Person, children: React.ReactNode) {
     return (
       <div className="connect-person" key={p.id}>
         <ConnectAvatar name={p.name} photo={p.photo} />
-        <strong>{p.name}</strong>
+        <strong>
+          {p.name}
+          {unreadThreads.some((t) => t.kind === "person" && t.id === p.id) && (
+            <span className="connect-row-unread" aria-label="Unread messages" />
+          )}
+        </strong>
         <div className="connect-actions">{children}</div>
       </div>
     );
@@ -179,6 +221,7 @@ export function Connect() {
           ? "Your name is visible to app members. Requests need your approval."
           : "You’re hidden from discovery. Accepted connections can still message you."}
       </p>
+      {push && <PushMessageControl settings={push} />}
       {error && (
         <p role="alert" className="connect-error">
           {error}{" "}
@@ -257,9 +300,7 @@ export function Connect() {
                           <button
                             className="primary"
                             disabled={busy}
-                            onClick={() =>
-                              setSelected({ ...p, kind: "person" })
-                            }
+                            onClick={() => openChat(p, "person")}
                           >
                             <MessageCircle size={15} /> Message
                           </button>
@@ -406,7 +447,17 @@ export function Connect() {
                   {data.groups.map((g) => (
                     <div key={g.id} className="connect-group">
                       <div>
-                        <h3>{g.name}</h3>
+                        <h3>
+                          {g.name}
+                          {unreadThreads.some(
+                            (t) => t.kind === "group" && t.id === g.id,
+                          ) && (
+                            <span
+                              className="connect-row-unread"
+                              aria-label="Unread messages"
+                            />
+                          )}
+                        </h3>
                         <p className="small muted">
                           {g.members
                             .map((p) => (p.id === data.me.id ? "You" : p.name))
@@ -435,7 +486,7 @@ export function Connect() {
                         ) : (
                           <button
                             className="primary"
-                            onClick={() => setSelected({ ...g, kind: "group" })}
+                            onClick={() => openChat(g, "group")}
                           >
                             Open chat
                           </button>
@@ -466,11 +517,10 @@ export function Connect() {
                 if (result) {
                   setCreating(false);
                   setTab("groups");
-                  setSelected({
-                    id: String(result.id),
-                    name: groupName.trim(),
-                    kind: "group",
-                  });
+                  openChat(
+                    { id: String(result.id), name: groupName.trim() },
+                    "group",
+                  );
                 }
               }}
             >
@@ -587,7 +637,10 @@ export function Connect() {
               <Conversation
                 key={selected.id}
                 person={selected}
-                close={() => setSelected(null)}
+                close={() => {
+                  setSelected(null);
+                  location.hash = "connect";
+                }}
               />
             </>
           )}
@@ -667,13 +720,55 @@ function Conversation({
     };
     const timer = setInterval(update, 10000);
     document.addEventListener("visibilitychange", update);
+    window.addEventListener("hiitco-connect-message", update);
     return () => {
       alive.current = false;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", update);
+      window.removeEventListener("hiitco-connect-message", update);
     };
   }, [person.id]);
   const newest = messages.at(-1)?.id;
+  const marked = useRef(0);
+  useEffect(() => {
+    let active = true,
+      pending = false;
+    const mark = async () => {
+      if (
+        !newest ||
+        newest <= marked.current ||
+        pending ||
+        document.visibilityState !== "visible"
+      )
+        return;
+      pending = true;
+      try {
+        await memberApi("connect", {
+          action: "mark_read",
+          ...(person.kind === "group"
+            ? { group: person.id }
+            : { peer: person.id }),
+          through: newest,
+        });
+        if (active) {
+          marked.current = newest;
+          unreadChanged();
+        }
+      } catch {
+      } finally {
+        pending = false;
+      }
+    };
+    void mark();
+    const visible = () => void mark();
+    const timer = setInterval(visible, 15000);
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", visible);
+    };
+  }, [newest, person.id, person.kind]);
   useEffect(() => {
     if (messageList.current)
       messageList.current.scrollTop = messageList.current.scrollHeight;

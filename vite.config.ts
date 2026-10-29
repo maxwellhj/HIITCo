@@ -41,6 +41,7 @@ export default defineConfig({
         ],
       },
       workbox: {
+        importScripts: ["/push-worker.js"],
         navigateFallback: "/index.html",
         navigateFallbackDenylist: [/^\/api(?:\/|$)/],
       },

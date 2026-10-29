@@ -201,6 +201,11 @@ const { join, resolve } = require("node:path");
     const messageId = crypto.randomUUID();
     await send(42, b.me.id, "See you at training!", messageId);
     await send(42, b.me.id, "See you at training!", messageId);
+    const unread = (id) =>
+      getJson("/api/gymmaster/connect?unread=1", { member: true, id });
+    assert.equal((await unread(43)).count, 1);
+    assert.equal((await unread(42)).count, 0);
+    assert.equal((await unread(44)).count, 0);
     const messages = (id, peer) =>
       getJson("/api/gymmaster/connect?peer=" + peer, { member: true, id });
     let history = await messages(43, a.me.id);
@@ -208,6 +213,32 @@ const { join, resolve } = require("node:path");
     assert.equal(history.messages[0].text, "See you at training!");
     assert.equal(history.messages[0].mine, false);
     assert.equal((await messages(42, b.me.id)).messages[0].mine, true);
+    assert.equal(
+      (await unread(43)).count,
+      1,
+      "fetching history alone does not mark messages read",
+    );
+    await post(43, {
+      action: "mark_read",
+      peer: a.me.id,
+      through: history.messages.at(-1).id,
+    });
+    assert.equal((await unread(43)).count, 0);
+    await post(
+      43,
+      { action: "mark_read", peer: a.me.id, through: Number.MAX_SAFE_INTEGER },
+      400,
+    );
+    await post(
+      44,
+      {
+        action: "mark_read",
+        peer: a.me.id,
+        through: history.messages.at(-1).id,
+      },
+      404,
+    );
+
     assert.equal(
       (
         await call("/api/gymmaster/connect?peer=" + a.me.id, {
@@ -413,6 +444,19 @@ const { join, resolve } = require("node:path");
     assert.equal(groupMessages.messages[0].mine, false);
     assert.equal(groupMessages.messages[1].mine, true);
     assert.ok(groupMessages.messages[0].name);
+    assert.equal(
+      (await unread(102)).count,
+      1,
+      "own group messages never count as unread",
+    );
+    assert.equal((await unread(101)).count, 1);
+    await post(102, {
+      action: "mark_read",
+      group,
+      through: groupMessages.messages.at(-1).id,
+    });
+    assert.equal((await unread(102)).count, 0);
+
     await post(103, { action: "join_group", group });
     assert.equal((await groupHistory(103)).messages.length, 2);
     await mf.dispose();

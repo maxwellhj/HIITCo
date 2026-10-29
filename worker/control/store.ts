@@ -1,3 +1,4 @@
+import { deliverPush, nextPushAlarm } from "../connect/push";
 import { initConnect, connectStore } from "../connect/store";
 import { apiJson, limitedText } from "../gymmaster/auth";
 interface Cursor<T> {
@@ -13,6 +14,7 @@ interface State {
       ): Cursor<T>;
     };
     transactionSync<T>(fn: () => T): T;
+    setAlarm?(time: number): Promise<void>;
   };
 }
 const key = (value: unknown): value is string =>
@@ -21,7 +23,10 @@ const stickerId = (value: unknown): value is string =>
   typeof value === "string" && /^[a-zA-Z0-9-]{1,80}$/.test(value);
 /** Only reached through a private Durable Object binding; never routed from the public Worker. */
 export class ControlStore {
-  constructor(private state: State) {
+  constructor(
+    private state: State,
+    private env?: { GYMMASTER_API_KEY?: string },
+  ) {
     initConnect(state.storage.sql);
     for (const sql of [
       "CREATE TABLE IF NOT EXISTS event_dismissals (member_key TEXT NOT NULL,event_id TEXT NOT NULL,PRIMARY KEY(member_key,event_id))",
@@ -41,11 +46,55 @@ export class ControlStore {
     ])
       state.storage.sql.exec(sql);
   }
+  async alarm() {
+    if (!this.env?.GYMMASTER_API_KEY) return;
+    try {
+      await deliverPush(this.state.storage.sql, this.env.GYMMASTER_API_KEY);
+    } catch {
+      console.error("CONNECT-PUSH-DELIVERY");
+    }
+    const next = nextPushAlarm(this.state.storage.sql);
+    if (next !== null)
+      await this.state.storage.setAlarm?.(Math.max(Date.now() + 1000, next));
+  }
   async fetch(request: Request) {
     const url = new URL(request.url),
       sql = this.state.storage.sql;
     try {
-      if (url.pathname === "/connect") return await connectStore(request, sql);
+      if (url.pathname === "/connect") {
+        const response = await connectStore(
+          request,
+          sql,
+          this.env?.GYMMASTER_API_KEY,
+        );
+        const alarm = nextPushAlarm(sql);
+        if (alarm !== null)
+          await this.state.storage.setAlarm?.(
+            Math.max(Date.now() + 100, alarm),
+          );
+        return response;
+      }
+      if (
+        url.pathname === "/connect-push-logout" &&
+        request.method === "POST"
+      ) {
+        const body = (await request.json()) as {
+          actor?: string;
+          deviceId?: string;
+        };
+        if (
+          !key(body.actor) ||
+          typeof body.deviceId !== "string" ||
+          !/^[A-Za-z0-9_-]{43}$/.test(body.deviceId)
+        )
+          throw Error();
+        sql.exec(
+          "DELETE FROM connect_push_subscriptions WHERE id=? AND member_id=?",
+          body.deviceId,
+          body.actor,
+        );
+        return apiJson({ saved: true });
+      }
       if (request.method === "GET") {
         if (url.pathname === "/event-dismissals") {
           const memberKey = url.searchParams.get("memberKey");

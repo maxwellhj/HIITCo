@@ -1,0 +1,74 @@
+.connect-nav-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.unread-blue-dot {
+  position: absolute;
+  right: -5px;
+  top: -3px;
+  width: 9px;
+  height: 9px;
+  background: #2584d2;
+  border: 2px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #2584d22a;
+}
+.unread-home-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  background: #eaf4fe;
+  border: 1px solid #bdd9ed;
+  border-left: 4px solid #318bc9;
+  border-radius: 15px;
+  padding: 17px 18px;
+  margin-bottom: 18px;
+  box-shadow: 0 5px 15px #183b5010;
+}
+.unread-home-banner > svg {
+  flex-shrink: 0;
+  color: #2474ae;
+  margin-top: 2px;
+}
+.unread-home-banner strong {
+  font-size: 15px;
+}
+.unread-home-banner p {
+  font-size: 12px;
+  margin: 5px 0 10px;
+  overflow-wrap: anywhere;
+}
+.unread-home-banner a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1b659b;
+}
+.message-push-control {
+  margin: 0 0 8px;
+}
+.message-push-control button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  padding: 2px 0;
+  min-height: 28px;
+}
+.message-push-control p {
+  font-size: 11px;
+  margin: 0 0 8px;
+  color: #526777;
+}
+.connect-row-unread {
+  width: 8px;
+  height: 8px;
+  background: #2584d2;
+  border-radius: 50%;
+  display: inline-block;
+  margin-left: 6px;
+  flex-shrink: 0;
+}

@@ -1,3 +1,4 @@
+import { queuePush } from "./push";
 import { profileFields } from "./profileStore";
 import { apiJson } from "../gymmaster/auth";
 import type { ConnectSql } from "./store";
@@ -210,14 +211,25 @@ export function groupStore(
       !uuid(body.messageId)
     )
       return apiJson({ error: "invalid_request" }, 400);
-    sql.exec(
-      "INSERT INTO connect_group_messages(group_id,sender,sealed,created_at,message_id) VALUES(?,?,?,?,?) ON CONFLICT(sender,message_id) DO NOTHING",
-      group,
-      actor,
-      body.sealed,
-      body.createdAt,
-      body.messageId,
-    );
+    const inserted = sql
+      .exec<{ seq: number }>(
+        "INSERT INTO connect_group_messages(group_id,sender,sealed,created_at,message_id) VALUES(?,?,?,?,?) ON CONFLICT(sender,message_id) DO NOTHING RETURNING seq",
+        group,
+        actor,
+        body.sealed,
+        body.createdAt,
+        body.messageId,
+      )
+      .toArray()[0];
+    if (inserted)
+      for (const recipient of sql
+        .exec<{ member_id: string }>(
+          "SELECT member_id FROM connect_group_members WHERE group_id=? AND status='active' AND member_id!=?",
+          group,
+          actor,
+        )
+        .toArray())
+        queuePush(sql, recipient.member_id, "group", group, inserted.seq);
     return apiJson({ saved: true });
   }
   const before = body.before ?? Number.MAX_SAFE_INTEGER;

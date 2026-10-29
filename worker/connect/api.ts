@@ -68,6 +68,9 @@ export async function connectApi(
         Object.keys(body).some(
           (k) =>
             ![
+              "through",
+              "subscription",
+              "endpoint",
               "displayName",
               "photo",
               "group",
@@ -85,6 +88,9 @@ export async function connectApi(
         return apiJson({ error: "invalid_request" }, 400);
       if (
         ![
+          "mark_read",
+          "push_subscribe",
+          "push_unsubscribe",
           "profile_save",
           "create_group",
           "join_group",
@@ -110,6 +116,16 @@ export async function connectApi(
       )
         return apiJson({ error: "invalid_request" }, 400);
       body = { action: "photo", peer: url.searchParams.get("member") };
+    } else if (
+      url.searchParams.get("unread") === "1" &&
+      [...url.searchParams.keys()].length === 1
+    ) {
+      body = { action: "unread" };
+    } else if (
+      url.searchParams.get("push") === "1" &&
+      [...url.searchParams.keys()].length === 1
+    ) {
+      body = { action: "push_config" };
     } else if (
       url.searchParams.get("profile") === "me" &&
       [...url.searchParams.keys()].length === 1
@@ -291,6 +307,29 @@ export async function connectApi(
             "Cross-Origin-Resource-Policy": "same-origin",
           },
         },
+      );
+    }
+    if (body.action === "push_subscribe")
+      return apiJson({ saved: true }, 200, {
+        "Set-Cookie": `__Host-hiitco-push-device=${data.deviceId}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=31536000`,
+      });
+    if (body.action === "push_unsubscribe")
+      return apiJson({ saved: true }, 200, {
+        "Set-Cookie":
+          "__Host-hiitco-push-device=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0",
+      });
+    if (body.action === "unread") {
+      data.threads = await Promise.all(
+        data.threads.map(async (t: any) => ({
+          id: t.id,
+          kind: t.kind,
+          count: t.count,
+          name:
+            t.kind === "group"
+              ? (await openTraining(t.name, secret, "connect.group:" + t.id))
+                  .name
+              : (await person(t)).name,
+        })),
       );
     }
     if (body.action === "profile_get") {

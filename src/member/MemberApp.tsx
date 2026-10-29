@@ -1,3 +1,9 @@
+import {
+  useUnreadMessages,
+  useMessagePush,
+  UnreadMessagesBanner,
+  stopDevicePush,
+} from "./notifications";
 import { ProfileButton } from "./ProfileEditor";
 import { MemberProgress } from "./MemberProgress";
 import { MemberChow } from "./ChowScores";
@@ -70,6 +76,8 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
   const generation = useRef(0),
     controller = useRef<AbortController | null>(null),
     channel = useRef<BroadcastChannel | null>(null);
+  const unread = useUnreadMessages(phase === "ready");
+  const push = useMessagePush(phase === "ready");
   function clear() {
     setProfile(null);
     setDays(null);
@@ -235,6 +243,7 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
     setBusy(true);
     setError("");
     try {
+      await stopDevicePush();
       await memberApi("logout", {});
       setPhase("signedout");
       location.hash = "home";
@@ -324,8 +333,18 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
               href={`#${id}`}
               className={page === id ? "active" : ""}
               aria-current={page === id ? "page" : undefined}
+              aria-label={
+                id === "connect" && unread.count > 0
+                  ? `Connect, ${unread.count} unread messages`
+                  : undefined
+              }
             >
-              <Icon size={20} />
+              <span className="connect-nav-icon">
+                <Icon size={20} />
+                {id === "connect" && unread.count > 0 && (
+                  <span className="unread-blue-dot" aria-hidden="true" />
+                )}
+              </span>
               {label}
             </a>
           ))}
@@ -389,17 +408,20 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
             </div>
           )}
           {page === "home" ? (
-            <MemberDashboard
-              profile={profile}
-              showStats={showHomeStats}
-              days={days}
-              streakSummary={streakSummary}
-              checkins={checkins}
-              checkinError={checkinError}
-              attendanceError={attendanceError}
-              refresh={() => void load()}
-              busy={false}
-            />
+            <>
+              <UnreadMessagesBanner {...unread} />
+              <MemberDashboard
+                profile={profile}
+                showStats={showHomeStats}
+                days={days}
+                streakSummary={streakSummary}
+                checkins={checkins}
+                checkinError={checkinError}
+                attendanceError={attendanceError}
+                refresh={() => void load()}
+                busy={false}
+              />
+            </>
           ) : page === "progress" ? (
             <MemberProgress />
           ) : page === "account" ? (
@@ -433,7 +455,7 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
           ) : page === "skills" ? (
             <Skills />
           ) : page === "connect" ? (
-            <Connect />
+            <Connect unreadThreads={unread.threads} push={push} />
           ) : logRoute === "#log/chow" ? (
             <MemberChow />
           ) : (
@@ -458,8 +480,18 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
             href={`#${id}`}
             className={page === id ? "active" : ""}
             aria-current={page === id ? "page" : undefined}
+            aria-label={
+              id === "connect" && unread.count > 0
+                ? `Connect, ${unread.count} unread messages`
+                : undefined
+            }
           >
-            <Icon size={21} />
+            <span className="connect-nav-icon">
+              <Icon size={21} />
+              {id === "connect" && unread.count > 0 && (
+                <span className="unread-blue-dot" aria-hidden="true" />
+              )}
+            </span>
             <span>{label}</span>
           </a>
         ))}

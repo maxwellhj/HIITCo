@@ -1,3 +1,5 @@
+import { initUnread, unreadSummary, markRead } from "./unread";
+import { initPush, pushStore, queuePush } from "./push";
 import { initProfiles, profileFields, profileStore } from "./profileStore";
 import {
   initGroups,
@@ -13,6 +15,8 @@ export interface ConnectSql {
   ): { toArray(): T[] };
 }
 export function initConnect(sql: ConnectSql) {
+  initUnread(sql);
+  initPush(sql);
   initGroups(sql);
   initProfiles(sql);
   for (const query of [
@@ -27,7 +31,11 @@ export function initConnect(sql: ConnectSql) {
 }
 const validId = (v: unknown): v is string =>
   typeof v === "string" && /^[a-f0-9]{64}$/.test(v);
-export async function connectStore(request: Request, sql: ConnectSql) {
+export async function connectStore(
+  request: Request,
+  sql: ConnectSql,
+  secret?: string,
+) {
   if (request.method !== "POST")
     return apiJson({ error: "method_not_allowed" }, 405);
   const body = JSON.parse(await limitedText(request.body, 650000));
@@ -35,6 +43,11 @@ export async function connectStore(request: Request, sql: ConnectSql) {
   if (
     !validId(actor) ||
     ![
+      "unread",
+      "mark_read",
+      "push_config",
+      "push_subscribe",
+      "push_unsubscribe",
       "create_group",
       "join_group",
       "decline_group",
@@ -61,6 +74,9 @@ export async function connectStore(request: Request, sql: ConnectSql) {
     return apiJson({ error: "invalid_request" }, 400);
   const bucket = Math.floor(Date.now() / 60000),
     scope =
+      action === "unread" ||
+      action === "mark_read" ||
+      action === "push_config" ||
       action === "state" ||
       action === "messages" ||
       action === "group_messages" ||
@@ -92,6 +108,23 @@ export async function connectStore(request: Request, sql: ConnectSql) {
     actor,
     body.name,
   );
+  if (["push_config", "push_subscribe", "push_unsubscribe"].includes(action))
+    return pushStore(body, sql, secret);
+  if (action === "unread") return apiJson(unreadSummary(sql, actor));
+  if (action === "mark_read") {
+    if (body.group && body.peer)
+      return apiJson({ error: "invalid_request" }, 400);
+    const thread = body.group ?? body.peer;
+    if (typeof thread !== "string" || thread.length > 80)
+      return apiJson({ error: "invalid_request" }, 400);
+    return markRead(
+      sql,
+      actor,
+      body.group ? "group" : "person",
+      thread,
+      body.through,
+    );
+  }
   if (["profile_get", "profile_save", "photo"].includes(action))
     return profileStore(body, sql);
   if (
@@ -272,15 +305,18 @@ export async function connectStore(request: Request, sql: ConnectSql) {
       !/^[a-f0-9-]{36}$/.test(body.messageId)
     )
       return apiJson({ error: "invalid_request" }, 400);
-    sql.exec(
-      "INSERT INTO connect_messages(a,b,sender,sealed,created_at,message_id) VALUES(?,?,?,?,?,?) ON CONFLICT(sender,message_id) DO NOTHING",
-      a,
-      b,
-      actor,
-      body.sealed,
-      body.createdAt,
-      body.messageId,
-    );
+    const inserted = sql
+      .exec<{ seq: number }>(
+        "INSERT INTO connect_messages(a,b,sender,sealed,created_at,message_id) VALUES(?,?,?,?,?,?) ON CONFLICT(sender,message_id) DO NOTHING RETURNING seq",
+        a,
+        b,
+        actor,
+        body.sealed,
+        body.createdAt,
+        body.messageId,
+      )
+      .toArray()[0];
+    if (inserted) queuePush(sql, peer, "person", actor, inserted.seq);
     sql.exec("DELETE FROM connect_limits WHERE bucket<?", bucket - 1440);
     return apiJson({ saved: true });
   }
