@@ -63,9 +63,12 @@ function buildMetricsFeed(all, today) {
   all.filter(function(row){return row.weekEnding<=today;}).forEach(function(row){byDate[row.weekEnding]=row;});
   var records = Object.keys(byDate).sort().map(function(date){return byDate[date];});
   var fields = ['intro','membershipsSold','attendance','visits','cancels','churn','autopay','suspended'];
+  if (!records.length) return {ok:false,error:'No reported metric columns were found.'};
   var completed = records.filter(function(row){return fields.every(function(key){return typeof row[key]==='number' && isFinite(row[key]);});});
-  if (!completed.length) return {ok:false,error:'No completed column found. Enter all eight metrics, including explicit zeroes where appropriate.'};
-  var newest = completed[completed.length-1].weekEnding;
-  return {ok:true,newestCompleted:newest,records:records.filter(function(row){return row.weekEnding<=newest;}),
-    skippedIncompleteColumns:records.filter(function(row){return row.weekEnding>newest;}).length};
+  var newestReported = records[records.length-1].weekEnding;
+  var latest = records[records.length-1];
+  return {ok:true,newestReported:newestReported,newestCompleted:completed.length?completed[completed.length-1].weekEnding:null,
+    records:records,missingLatestFields:fields.filter(function(key){return latest[key]===null;}),
+    incompleteColumnCount:records.filter(function(row){return fields.some(function(key){return row[key]===null;});}).length};
+
 }
