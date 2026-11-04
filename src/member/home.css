@@ -1,0 +1,81 @@
+.home-fold > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 16px;
+  font-weight: 600;
+  min-height: 26px;
+}
+.home-fold > summary::-webkit-details-marker {
+  display: none;
+}
+.home-fold > summary > svg:last-child {
+  margin-left: auto;
+  transition: transform 0.15s;
+}
+.home-fold[open] > summary > svg:last-child {
+  transform: rotate(180deg);
+}
+.home-fold[open] > summary {
+  margin-bottom: 16px;
+}
+.home-workout-fold .home-workouts {
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+}
+.home-workout-fold .home-workouts > .section-top h2 {
+  display: none;
+}
+.home-workout-fold .home-workouts > .section-top {
+  justify-content: flex-end;
+  margin-bottom: 6px;
+}
+.home-section-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  font-size: 16px;
+  cursor: pointer;
+}
+.home-section-toggle[aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+.member-overview .home-attendance .compact-week-tabs {
+  gap: 6px;
+  margin: 12px 0 0;
+}
+.member-overview .compact-week-tabs button {
+  min-height: 38px;
+  padding: 8px 6px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 0;
+}
+.member-overview .home-attendance {
+  padding: 18px;
+}
+.home-attendance [hidden] {
+  display: none;
+}
+.home-habits .habit-check:last-child {
+  padding-bottom: 0;
+}
+.home-habits .habit-check:first-of-type {
+  border-top: 0;
+}
+.member-overview > .home-fold {
+  margin-bottom: 14px;
+}

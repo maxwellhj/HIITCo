@@ -174,3 +174,11 @@ Durable Object, a separate goals table/encryption context and optimistic revisio
 No extra Cloudflare binding or secret is required. Goals are not copied to the
 Control Room metrics feed. Run `node scripts/check-personal-goals.cjs` to verify
 SQLite persistence, account isolation, check-off changes and revision conflicts.
+
+Home shows today's scheduled goal habits above expandable weekly workouts,
+compact attendance week buttons, then Skills Library. Habits and workouts start
+open; attendance starts closed. Home check-offs use the same encrypted goals log
+and revision checks as Progress → Goals. Only habits scheduled for the current
+New Zealand day appear, and the feed refreshes on focus/every 30 seconds while
+visible. Home no longer includes club event prompts or the bottom events list;
+events remain available in the Events tab.

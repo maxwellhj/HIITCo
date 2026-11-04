@@ -1,5 +1,5 @@
 .member-progress .progress-sections {
-  grid-template-columns: 1.2fr 0.7fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .member-goals {
   min-height: 50dvh;
@@ -151,4 +151,10 @@
   .goal-dialog {
     padding: 18px;
   }
+}
+
+.member-progress .progress-sections button {
+  min-height: 52px;
+  height: 100%;
+  white-space: normal;
 }

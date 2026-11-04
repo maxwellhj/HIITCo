@@ -1,14 +1,14 @@
-import { HomeEventPrompt } from "../components/HomeEventPrompt";
+import { HomeHabits } from "./HomeHabits";
+import "./home.css";
 import "../pages/events.css";
 import { useState } from "react";
-import { ArrowRight, CalendarDays, Flame, Trophy, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Flame, Trophy, X } from "lucide-react";
 import { Card } from "../components/UI";
 import { Bullseye } from "../components/Bullseye";
 import { BoxingGlove } from "../components/BoxingGlove";
 import { WeeklyWorkouts } from "../components/WeeklyWorkouts";
 import { useClubContent } from "./useClubContent";
-import { trainingDays, eventTimeLabel } from "../domain/club";
-import { upcomingEvents } from "../domain/events";
+import { trainingDays } from "../domain/club";
 import { dateKey, formatDate, weekKey } from "../domain/attendance";
 import type { DailyVisits } from "../domain/gymmasterVisits";
 import type { GymMasterMemberProfile } from "../domain/gymmasterProfile";
@@ -37,7 +37,7 @@ export function MemberDashboard({
   progress?: boolean;
   showStats?: boolean;
 }) {
-  const { data: club, error: clubError, dismissEvent } = useClubContent();
+  const { data: club } = useClubContent();
   const today = dateKey(new Date());
   const trained = trainingDays(days, checkins, today);
   const [week, setWeek] = useState(0),
@@ -72,13 +72,12 @@ export function MemberDashboard({
   const streakExact = streakSummary ? streakSummary.exact : stats?.streakExact;
   const streak =
     streakCount == null ? "—" : `${streakCount}${streakExact ? "" : "+"}`;
-  const event = upcomingEvents(club?.events ?? [], today)[0];
+  const [attendanceOpen, setAttendanceOpen] = useState(false);
   const selectedCheckins = selected
     ? (checkins?.filter((record) => record.date === selected.date) ?? [])
     : [];
   return (
     <div className="home-overview member-overview">
-      {!progress && <HomeEventPrompt club={club} dismiss={dismissEvent} />}
       {(progress || showStats) && (
         <div className="member-stats-dropdown" id="member-home-stats">
           <div className="home-stat-row">
@@ -157,143 +156,171 @@ export function MemberDashboard({
           </p>
         </div>
       )}
-      {!progress && <WeeklyWorkouts week={weekKey(today)} published />}
+      {!progress && <HomeHabits />}
+      {!progress && (
+        <details className="card home-fold home-workout-fold" open>
+          <summary>
+            This week’s workouts
+            <ChevronDown size={18} />
+          </summary>
+          <WeeklyWorkouts week={weekKey(today)} published />
+        </details>
+      )}
       <Card className="home-attendance">
         <div className="section-top">
-          <h2>Your weekly attendance</h2>
+          <button
+            className="home-section-toggle"
+            aria-expanded={attendanceOpen}
+            aria-controls="home-attendance-content"
+            onClick={() => setAttendanceOpen((v) => !v)}
+          >
+            Weekly club attendance
+            <ChevronDown size={18} />
+          </button>
           <button className="text-button" disabled={busy} onClick={refresh}>
             {busy ? "Refreshing…" : "Refresh"}
           </button>
         </div>
-        {attendanceError && (
-          <p className="error" role="alert">
-            {attendanceError}
-          </p>
+        {stats && (
+          <div className="member-week-tabs compact-week-tabs">
+            {stats.weeks.map((w, i) => (
+              <button
+                key={w.start}
+                className={
+                  i === week && attendanceOpen ? "primary" : "secondary"
+                }
+                aria-expanded={i === week && attendanceOpen}
+                aria-controls="home-attendance-content"
+                onClick={() => {
+                  setAttendanceOpen(i === week ? !attendanceOpen : true);
+                  setWeek(i);
+                  setSelected(null);
+                }}
+              >
+                {["This week", "Last week", "2 weeks ago"][i]}
+                <ChevronDown size={14} />
+              </button>
+            ))}
+          </div>
         )}
-        {stats ? (
-          <>
-            <div className="member-week-tabs">
-              {stats.weeks.map((w, i) => (
-                <button
-                  key={w.start}
-                  className={i === week ? "primary" : "secondary"}
-                  aria-pressed={i === week}
-                  onClick={() => {
-                    setWeek(i);
-                    setSelected(null);
-                  }}
-                >
-                  {["This week", "Last week", "2 weeks ago"][i]}
-                </button>
-              ))}
-            </div>
-            <p className="small muted">
-              Week of {formatDate(stats.weeks[week].start)} ·{" "}
-              {stats.weeks[week].complete
-                ? `${stats.weeks[week].total} visits`
-                : stats.weeks[week].total > 0
-                  ? `At least ${stats.weeks[week].total} visits; some dates weren’t returned`
-                  : "Complete attendance not supplied"}
+        <div id="home-attendance-content" hidden={!attendanceOpen}>
+          {attendanceError && (
+            <p className="error" role="alert">
+              {attendanceError}
             </p>
-            <div className="member-day-grid">
-              {stats.weeks[week].days.map((day) => (
-                <button
-                  className={`member-day ${(day.visits !== null && day.visits > 0) || checkins?.some((record) => record.date === day.date) ? "attended" : ""}`}
-                  key={day.date}
-                  disabled={day.future}
-                  onClick={() => setSelected(day)}
-                  aria-label={`${formatDate(day.date, { weekday: "long", day: "numeric", month: "long" })}, ${day.future ? "upcoming" : day.visits === null ? (checkins?.some((record) => record.date === day.date) ? "check-in time received; daily count pending" : "not returned") : `${day.visits} visits`}`}
-                >
-                  <span>{formatDate(day.date, { weekday: "short" })}</span>
-                  <small>{formatDate(day.date, { day: "numeric" })}</small>
-                  <strong>
-                    {day.future
-                      ? "·"
-                      : checkins?.some((record) => record.date === day.date)
-                        ? "✓"
-                        : day.visits === null
-                          ? checkins?.some((record) => record.date === day.date)
-                            ? "✓"
-                            : "?"
-                          : day.visits > 0
-                            ? "✓"
-                            : "0"}
-                  </strong>
-                </button>
-              ))}
-            </div>
-            {selected && (
-              <div className="member-visit-detail" role="status">
-                <button
-                  className="icon-button"
-                  aria-label="Close visit details"
-                  onClick={() => setSelected(null)}
-                >
-                  <X size={16} />
-                </button>
-                <strong>
-                  {formatDate(selected.date, {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                  })}
-                </strong>
-                <p>
-                  {selected.visits === null
-                    ? selectedCheckins.length > 0
-                      ? "The daily visit count hasn’t updated for this date yet."
-                      : "GymMaster didn’t return a daily count for this date. It doesn’t confirm zero visits."
-                    : `GymMaster recorded ${selected.visits} ${selected.visits === 1 ? "visit" : "visits"}.`}
-                </p>
-                {selectedCheckins.length > 0 ? (
-                  <>
-                    {selected.visits === 0 && (
-                      <p className="small muted">
-                        The daily count may still be catching up to this
-                        check-in.
-                      </p>
-                    )}
-                    <p className="small muted">
-                      Club check-in times · New Zealand time
-                    </p>
-                    <ul className="member-checkin-times">
-                      {selectedCheckins.map((record) => (
-                        <li key={record.id}>
-                          <time dateTime={record.localTimestamp}>
-                            {checkinTimeLabel(record.localTimestamp)}
-                          </time>
-                          <span>
-                            {record.door ?? "Club check-in"}
-                            <small>Ref {record.id}</small>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="small muted">
-                      Only times received by this app are shown; this may not be
-                      every visit.
-                    </p>
-                  </>
-                ) : checkinError ? (
-                  <p className="error">{checkinError}</p>
-                ) : (
-                  <p>
-                    No check-in time has been received for this date. Older
-                    visits may have a count but no arrival time.
-                  </p>
-                )}
+          )}
+          {stats ? (
+            <>
+              <p className="small muted">
+                Week of {formatDate(stats.weeks[week].start)} ·{" "}
+                {stats.weeks[week].complete
+                  ? `${stats.weeks[week].total} visits`
+                  : stats.weeks[week].total > 0
+                    ? `At least ${stats.weeks[week].total} visits; some dates weren’t returned`
+                    : "Complete attendance not supplied"}
+              </p>
+              <div className="member-day-grid">
+                {stats.weeks[week].days.map((day) => (
+                  <button
+                    className={`member-day ${(day.visits !== null && day.visits > 0) || checkins?.some((record) => record.date === day.date) ? "attended" : ""}`}
+                    key={day.date}
+                    disabled={day.future}
+                    onClick={() => setSelected(day)}
+                    aria-label={`${formatDate(day.date, { weekday: "long", day: "numeric", month: "long" })}, ${day.future ? "upcoming" : day.visits === null ? (checkins?.some((record) => record.date === day.date) ? "check-in time received; daily count pending" : "not returned") : `${day.visits} visits`}`}
+                  >
+                    <span>{formatDate(day.date, { weekday: "short" })}</span>
+                    <small>{formatDate(day.date, { day: "numeric" })}</small>
+                    <strong>
+                      {day.future
+                        ? "·"
+                        : checkins?.some((record) => record.date === day.date)
+                          ? "✓"
+                          : day.visits === null
+                            ? checkins?.some(
+                                (record) => record.date === day.date,
+                              )
+                              ? "✓"
+                              : "?"
+                            : day.visits > 0
+                              ? "✓"
+                              : "0"}
+                    </strong>
+                  </button>
+                ))}
               </div>
-            )}
-          </>
-        ) : !attendanceError ? (
-          <p>Loading your attendance…</p>
-        ) : (
-          <p>Your total visits above remain available.</p>
-        )}
-        <p className="small muted">
-          Weeks start Monday in New Zealand. GymMaster counts may take 10
-          minutes to update. Missing dates aren’t treated as zero.
-        </p>
+              {selected && (
+                <div className="member-visit-detail" role="status">
+                  <button
+                    className="icon-button"
+                    aria-label="Close visit details"
+                    onClick={() => setSelected(null)}
+                  >
+                    <X size={16} />
+                  </button>
+                  <strong>
+                    {formatDate(selected.date, {
+                      weekday: "long",
+                      day: "numeric",
+                      month: "long",
+                    })}
+                  </strong>
+                  <p>
+                    {selected.visits === null
+                      ? selectedCheckins.length > 0
+                        ? "The daily visit count hasn’t updated for this date yet."
+                        : "GymMaster didn’t return a daily count for this date. It doesn’t confirm zero visits."
+                      : `GymMaster recorded ${selected.visits} ${selected.visits === 1 ? "visit" : "visits"}.`}
+                  </p>
+                  {selectedCheckins.length > 0 ? (
+                    <>
+                      {selected.visits === 0 && (
+                        <p className="small muted">
+                          The daily count may still be catching up to this
+                          check-in.
+                        </p>
+                      )}
+                      <p className="small muted">
+                        Club check-in times · New Zealand time
+                      </p>
+                      <ul className="member-checkin-times">
+                        {selectedCheckins.map((record) => (
+                          <li key={record.id}>
+                            <time dateTime={record.localTimestamp}>
+                              {checkinTimeLabel(record.localTimestamp)}
+                            </time>
+                            <span>
+                              {record.door ?? "Club check-in"}
+                              <small>Ref {record.id}</small>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="small muted">
+                        Only times received by this app are shown; this may not
+                        be every visit.
+                      </p>
+                    </>
+                  ) : checkinError ? (
+                    <p className="error">{checkinError}</p>
+                  ) : (
+                    <p>
+                      No check-in time has been received for this date. Older
+                      visits may have a count but no arrival time.
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
+          ) : !attendanceError ? (
+            <p>Loading your attendance…</p>
+          ) : (
+            <p>Your total visits above remain available.</p>
+          )}
+          <p className="small muted">
+            Weeks start Monday in New Zealand. GymMaster counts may take 10
+            minutes to update. Missing dates aren’t treated as zero.
+          </p>
+        </div>
       </Card>
       {progress ? (
         <Card>
@@ -317,37 +344,6 @@ export function MemberDashboard({
             </span>
             <ArrowRight size={18} />
           </a>
-          <Card className="club-events">
-            <h2>
-              <CalendarDays size={17} /> Upcoming club events
-            </h2>
-            {event ? (
-              <a
-                className="home-next-event"
-                href={`#events/${encodeURIComponent(event.id)}`}
-              >
-                <span>
-                  <strong>{event.title}</strong>
-                  <small>
-                    {formatDate(event.date)}
-                    {event.time ? ` · ${eventTimeLabel(event.time)}` : ""}
-                  </small>
-                </span>
-                <ArrowRight size={17} />
-              </a>
-            ) : (
-              <p>
-                {clubError
-                  ? "Club events are temporarily unavailable."
-                  : !club
-                    ? "Loading club events…"
-                    : "No upcoming events just yet."}
-              </p>
-            )}
-            <a className="text-button" href="#events">
-              View all events <ArrowRight size={15} />
-            </a>
-          </Card>
         </>
       )}
     </div>
