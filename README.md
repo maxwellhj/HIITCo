@@ -159,3 +159,18 @@ Trophy Room has **All**, **Milestones** and **Events** filters, with All selecte
 Each Trophy Room sticker shows its current distinct-recipient total from Control Room unlocks. Unlocked examples say “You’re one of 32 members who have unlocked this achievement”; locked examples say “Join 32 members who have already unlocked this achievement.” A sole recipient is shown as the only member, and a locked zero-recipient achievement invites the viewer to be the first. The total includes the viewer when unlocked, counts each member once, and falls when an award is revoked. It does not infer grants from GymMaster attendance or count historical toggle/audit entries. Only aggregate counts are returned, never other recipients’ names or IDs. The Control Room sticker collection also displays the total.
 
 Counts and the viewing member’s unlock state are read together in a private SQLite transaction before decryption, so a concurrent grant/revoke cannot produce contradictory labels. The awards-by-sticker index supports aggregation. Existing category filters and unlocked-first alphabetical ordering remain intact; the current 15-second Trophy Room refresh picks up changes. The sticker runtime test covers multiple recipients, repeat grants, revocation, zero totals, preservation across category edits and aggregate privacy.
+
+### Personal goals and habits
+
+Progress has Strength Metrics, Goals and Trophy Room tabs. Goals starts empty;
+use the bottom-right plus to add a title, target date and up to five optional
+habits. Each habit has its own Monday–Sunday schedule. Daily check-offs and
+history use Pacific/Auckland dates; future and unscheduled days cannot be
+checked. Goals can be edited or deleted, and editing a schedule preserves past
+check-offs. Personal goals are separate from weekly attendance targets.
+
+`/api/gymmaster/goals` uses the authenticated member's existing encrypted training
+Durable Object, a separate goals table/encryption context and optimistic revisions.
+No extra Cloudflare binding or secret is required. Goals are not copied to the
+Control Room metrics feed. Run `node scripts/check-personal-goals.cjs` to verify
+SQLite persistence, account isolation, check-off changes and revision conflicts.

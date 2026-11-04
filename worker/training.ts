@@ -1,3 +1,4 @@
+import { parseGoals } from "../src/domain/goals";
 import { personalBests } from "../src/domain/control";
 import { emptyChowLog, parseChowLog } from "../src/domain/chow";
 import { apiJson, limitedText, type AuthEnv } from "./gymmaster/auth";
@@ -82,9 +83,14 @@ export async function memberTraining(
 ): Promise<Response | null> {
   const url = new URL(request.url);
   if (
-    !["/api/gymmaster/training", "/api/gymmaster/chow"].includes(url.pathname)
+    ![
+      "/api/gymmaster/training",
+      "/api/gymmaster/chow",
+      "/api/gymmaster/goals",
+    ].includes(url.pathname)
   )
     return null;
+  const isGoals = url.pathname.endsWith("/goals");
   const isChow = url.pathname.endsWith("/chow");
   if (!["GET", "POST"].includes(request.method))
     return apiJson({ error: "method_not_allowed" }, 405, {
@@ -111,7 +117,7 @@ export async function memberTraining(
     if (
       !(
         await env.LOGIN_RATE_LIMITER.limit({
-          key: `${isChow ? "chow" : "training"}:${request.method}:${memberKey}`,
+          key: `${isGoals ? "goals" : isChow ? "chow" : "training"}:${request.method}:${memberKey}`,
         })
       ).success
     )
@@ -121,12 +127,18 @@ export async function memberTraining(
     const store = env.MEMBER_TRAINING_LOGS.get(
       env.MEMBER_TRAINING_LOGS.idFromName(memberKey),
     );
-    const storageUrl = `https://training.internal/${isChow ? "chow" : "log"}`;
-    const encryptionContext = isChow ? `${memberKey}:chow-v1` : memberKey;
+    const storageUrl = `https://training.internal/${isGoals ? "goals" : isChow ? "chow" : "log"}`;
+    const encryptionContext = isGoals
+      ? `${memberKey}:goals-v1`
+      : isChow
+        ? `${memberKey}:chow-v1`
+        : memberKey;
     const parse = async (value: unknown) =>
-      isChow
-        ? parseChowLog(value, dateKey(new Date()))
-        : parseTrainingLog(value, dateKey(new Date()));
+      isGoals
+        ? parseGoals(value, dateKey(new Date()))
+        : isChow
+          ? parseChowLog(value, dateKey(new Date()))
+          : parseTrainingLog(value, dateKey(new Date()));
     if (request.method === "GET") {
       const response = await store.fetch(new Request(storageUrl));
       if (!response.ok) throw Error();
@@ -142,9 +154,11 @@ export async function memberTraining(
         throw Error();
       const log =
         result.sealed === null
-          ? isChow
-            ? emptyChowLog()
-            : emptyTrainingLog()
+          ? isGoals
+            ? { goals: [] }
+            : isChow
+              ? emptyChowLog()
+              : emptyTrainingLog()
           : await parse(
               await openTraining(
                 result.sealed,
@@ -246,7 +260,7 @@ export class MemberTrainingStore {
     private state: StoreState,
     private env: TrainingEnv = {},
   ) {
-    for (const table of ["training_log", "chow_log"])
+    for (const table of ["training_log", "chow_log", "goals_log"])
       state.storage.sql.exec(
         `CREATE TABLE IF NOT EXISTS ${table} (id INTEGER PRIMARY KEY CHECK(id=1), revision INTEGER NOT NULL, sealed TEXT NOT NULL)`,
       );
@@ -302,9 +316,14 @@ export class MemberTrainingStore {
   }
   async fetch(request: Request) {
     const path = new URL(request.url).pathname;
-    if (!["/log", "/chow"].includes(path))
+    if (!["/log", "/chow", "/goals"].includes(path))
       return apiJson({ error: "not_found" }, 404);
-    const table = path === "/chow" ? "chow_log" : "training_log";
+    const table =
+      path === "/goals"
+        ? "goals_log"
+        : path === "/chow"
+          ? "chow_log"
+          : "training_log";
     if (request.method === "GET") {
       const result = this.state.storage.sql
         .exec<{ revision: number; sealed: string | null }>(
@@ -335,7 +354,7 @@ export class MemberTrainingStore {
         throw Error();
       let snapshot: string | null = null;
       const kind = path === "/chow" ? "chow" : "training";
-      if (this.env.CONTROL_STORE) {
+      if (this.env.CONTROL_STORE && path !== "/goals") {
         if (
           !this.env.GYMMASTER_API_KEY ||
           typeof memberKey !== "string" ||

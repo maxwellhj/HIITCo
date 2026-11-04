@@ -1,6 +1,13 @@
+import { MemberGoals } from "./MemberGoals";
 import { achievementExclusivity } from "../domain/control";
 import { useEffect, useState } from "react";
-import { ArrowRight, LockKeyhole, Trophy, TrendingUp } from "lucide-react";
+import {
+  ArrowRight,
+  LockKeyhole,
+  Trophy,
+  TrendingUp,
+  Target,
+} from "lucide-react";
 import { Card } from "../components/UI";
 import { TrainingChart } from "../components/TrainingChart";
 import type { ClubSticker, StickerCategory } from "../domain/control";
@@ -177,7 +184,7 @@ export function TrophyRoom() {
   );
 }
 export function MemberProgress() {
-  const [tab, setTab] = useState<"strength" | "trophies">("strength"),
+  const [tab, setTab] = useState<"strength" | "goals" | "trophies">("strength"),
     [data, setData] = useState<TrainingLogData | null>(null),
     [selected, setSelected] = useState(""),
     [error, setError] = useState(""),
@@ -228,18 +235,20 @@ export function MemberProgress() {
           if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key))
             return;
           event.preventDefault();
+          const tabs = ["strength", "goals", "trophies"] as const;
           const next =
-            event.key === "Home"
-              ? "strength"
-              : event.key === "End"
-                ? "trophies"
-                : tab === "strength"
-                  ? "trophies"
-                  : "strength";
+            tabs[
+              event.key === "Home"
+                ? 0
+                : event.key === "End"
+                  ? 2
+                  : (tabs.indexOf(tab) + (event.key === "ArrowRight" ? 1 : 2)) %
+                    3
+            ];
           setTab(next);
           event.currentTarget
             .querySelector<HTMLButtonElement>(
-              `#${next === "strength" ? "strength-tab" : "trophy-tab"}`,
+              `#${next === "strength" ? "strength-tab" : next === "goals" ? "goals-tab" : "trophy-tab"}`,
             )
             ?.focus();
         }}
@@ -254,6 +263,17 @@ export function MemberProgress() {
         >
           <TrendingUp size={17} />
           Strength Metrics
+        </button>
+        <button
+          role="tab"
+          id="goals-tab"
+          aria-selected={tab === "goals"}
+          tabIndex={tab === "goals" ? 0 : -1}
+          aria-controls="goals-panel"
+          onClick={() => setTab("goals")}
+        >
+          <Target size={17} />
+          Goals
         </button>
         <button
           role="tab"
@@ -377,6 +397,10 @@ export function MemberProgress() {
                 ))}
             </Card>
           )}
+        </section>
+      ) : tab === "goals" ? (
+        <section id="goals-panel" role="tabpanel" aria-labelledby="goals-tab">
+          <MemberGoals />
         </section>
       ) : (
         <section id="trophy-panel" role="tabpanel" aria-labelledby="trophy-tab">
