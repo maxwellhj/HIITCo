@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Target, ChevronDown } from "lucide-react";
+import { X, ArrowRight, Target, ChevronDown } from "lucide-react";
 import { dateKey } from "../domain/attendance";
 import { habitScheduled, parseGoals, type GoalsLog } from "../domain/goals";
 import { memberApi, MemberApiError } from "./api";
@@ -88,6 +88,29 @@ export function HomeHabits() {
       setBusy(false);
     }
   }
+  async function dismissIntro() {
+    if (!data || pending.current) return;
+    pending.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      // Persist the first-use decision using the account log's revision, without creating a goal.
+      const result = await memberApi("goals", {
+        log: data.log,
+        revision: data.revision,
+      });
+      setData({ log: data.log, revision: result.revision as number });
+    } catch (e) {
+      setError(
+        e instanceof MemberApiError && e.status === 409
+          ? "Your goals changed on another device. Refresh habits and try again."
+          : "Couldn’t dismiss the banner. Please try again.",
+      );
+    } finally {
+      pending.current = false;
+      setBusy(false);
+    }
+  }
   const habits =
     data?.log.goals.flatMap((g) =>
       g.createdDate <= today
@@ -100,11 +123,21 @@ export function HomeHabits() {
   return (
     <>
       {data && !error && data.revision === 0 && data.log.goals.length === 0 && (
-        <a className="goals-intro-banner" href="#progress/goals">
-          <Target size={22} />
-          <span>Explore our new goals and habits feature here.</span>
-          <ArrowRight size={18} />
-        </a>
+        <div className="goals-intro-banner">
+          <a href="#progress/goals">
+            <Target size={22} />
+            <span>Explore our new goals and habits feature here.</span>
+            <ArrowRight size={18} />
+          </a>
+          <button
+            className="icon-button"
+            aria-label="Dismiss goals banner"
+            disabled={busy}
+            onClick={() => void dismissIntro()}
+          >
+            <X size={18} />
+          </button>
+        </div>
       )}
       <details className="card home-fold home-habits" open>
         <summary>

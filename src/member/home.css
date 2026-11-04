@@ -107,3 +107,25 @@
   outline: 2px solid #397eaf;
   outline-offset: 3px;
 }
+.goals-intro-banner > a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+}
+.goals-intro-banner > a > svg {
+  flex-shrink: 0;
+}
+.goals-intro-banner .icon-button {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  color: inherit;
+}
+.goals-intro-banner:focus-within {
+  outline: 2px solid #397eaf;
+  outline-offset: 3px;
+}
