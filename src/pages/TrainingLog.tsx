@@ -1,3 +1,4 @@
+import "./trainingFilters.css";
 import { prepareWorkoutExercise } from "../domain/workoutExercises";
 import { useState } from "react";
 import {
@@ -14,6 +15,9 @@ import type { MemberProfile } from "../domain/models";
 import { dateKey, formatDate } from "../domain/attendance";
 import {
   exerciseProgress,
+  exerciseCategory,
+  exerciseCategories,
+  type ExerciseCategory,
   heaviestSet,
   sessionVolume,
   validateSession,
@@ -79,6 +83,9 @@ export function TrainingLog({
     [deleting, setDeleting] = useState<string | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState("");
+  const [category, setCategory] = useState<"all" | ExerciseCategory>("all"),
+    [newCategory, setNewCategory] = useState<ExerciseCategory>("other"),
+    [visibleCount, setVisibleCount] = useState(10);
   const [saving, setSaving] = useState(false);
   const today = dateKey(new Date()),
     data = state.data,
@@ -116,6 +123,13 @@ export function TrainingLog({
       </Card>
     );
   const stats = exercise ? exerciseProgress(data.sessions, exercise.id) : null;
+  const filtered = data.exercises
+    .filter(
+      (e) =>
+        (category === "all" || exerciseCategory(e) === category) &&
+        e.name.toLowerCase().includes(search.toLowerCase()),
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
   return (
     <fieldset className="training-space training-fieldset" disabled={saving}>
       {saving && <p role="status">Saving your log…</p>}
@@ -176,7 +190,10 @@ export function TrainingLog({
                     const id = crypto.randomUUID();
                     await save({
                       ...data,
-                      exercises: [...data.exercises, { id, name }],
+                      exercises: [
+                        ...data.exercises,
+                        { id, name, category: newCategory },
+                      ],
                     });
                     setAdding(false);
                     setExerciseName("");
@@ -202,17 +219,52 @@ export function TrainingLog({
                     onChange={(e) => setExerciseName(e.target.value)}
                   />
                 </label>
+                <label>
+                  Exercise category
+                  <select
+                    value={newCategory}
+                    onChange={(e) =>
+                      setNewCategory(e.target.value as ExerciseCategory)
+                    }
+                  >
+                    {Object.entries(exerciseCategories).map(([id, label]) => (
+                      <option key={id} value={id}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <button className="primary">Add exercise</button>
               </form>
             </Card>
           )}
+          <label className="training-search">
+            Filter exercises
+            <select
+              value={category}
+              onChange={(e) => {
+                setCategory(e.target.value as "all" | ExerciseCategory);
+                setVisibleCount(10);
+              }}
+            >
+              <option value="all">All exercises</option>
+              {Object.entries(exerciseCategories).map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
           <label className="training-search">
             Find an exercise
             <input
               type="search"
               placeholder="Search exercises…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setVisibleCount(10);
+              }}
             />
           </label>
           {error && (
@@ -221,37 +273,43 @@ export function TrainingLog({
             </p>
           )}
           <div className="exercise-list">
-            {data.exercises
-              .filter((e) =>
-                e.name.toLowerCase().includes(search.toLowerCase()),
-              )
-              .map((item) => {
-                const s = exerciseProgress(data.sessions, item.id);
-                return (
-                  <button
-                    className="exercise-item"
-                    key={item.id}
-                    onClick={() => openExercise(item.id)}
-                  >
-                    <span className="icon-tile">
-                      <Dumbbell size={21} />
-                    </span>
-                    <span>
-                      <strong>{item.name}</strong>
-                      <small>
-                        {s.history.length
-                          ? `${s.history.length} session${s.history.length === 1 ? "" : "s"} · Best set ${number(s.bestWeight)} kg`
-                          : "No sessions yet · Start your log"}
-                      </small>
-                    </span>
-                    <ChevronRight size={19} />
-                  </button>
-                );
-              })}
+            {filtered.slice(0, visibleCount).map((item) => {
+              const s = exerciseProgress(data.sessions, item.id);
+              return (
+                <button
+                  className="exercise-item"
+                  key={item.id}
+                  onClick={() => openExercise(item.id)}
+                >
+                  <span className="icon-tile">
+                    <Dumbbell size={21} />
+                  </span>
+                  <span>
+                    <strong>{item.name}</strong>
+                    <small>
+                      {s.history.length
+                        ? `${s.history.length} session${s.history.length === 1 ? "" : "s"} · Best set ${number(s.bestWeight)} kg`
+                        : "No sessions yet · Start your log"}
+                    </small>
+                  </span>
+                  <ChevronRight size={19} />
+                </button>
+              );
+            })}
           </div>
-          {!data.exercises.some((e) =>
-            e.name.toLowerCase().includes(search.toLowerCase()),
-          ) && (
+          {filtered.length > visibleCount && (
+            <button
+              className="secondary"
+              onClick={() => setVisibleCount((n) => n + 10)}
+            >
+              Show more exercises ({filtered.length - visibleCount})
+            </button>
+          )}
+          <p className="small muted">
+            {Math.min(visibleCount, filtered.length)} of {filtered.length}{" "}
+            exercises
+          </p>
+          {!filtered.length && (
             <Card className="state">
               <h3>No matching exercises</h3>
               <p>Try another name or add your own exercise.</p>
@@ -282,6 +340,46 @@ export function TrainingLog({
               </p>
             </div>
           </div>
+          <label className="training-search">
+            Exercise category
+            <select
+              value={exerciseCategory(exercise)}
+              onChange={async (e) => {
+                setError("");
+                try {
+                  await save({
+                    ...data,
+                    exercises: data.exercises.map((item) =>
+                      item.id === exercise.id
+                        ? {
+                            ...item,
+                            category: e.target.value as ExerciseCategory,
+                          }
+                        : item,
+                    ),
+                  });
+                  setNotice("Exercise category saved.");
+                } catch (err) {
+                  setError(
+                    err instanceof Error
+                      ? err.message
+                      : "Couldn’t save this category.",
+                  );
+                }
+              }}
+            >
+              {Object.entries(exerciseCategories).map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {error && !editing && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
           <div className="training-stats">
             <Card>
               <span>Heaviest set</span>

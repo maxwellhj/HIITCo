@@ -150,7 +150,7 @@ export function MemberGoals() {
                   day >= goal.createdDate && habitScheduled(h, day);
                 return (
                   <label
-                    className={`habit-check ${available ? "" : "habit-off"}`}
+                    className={`habit-check ${available ? "" : "habit-off"} ${h.completed.includes(day) ? "habit-complete" : ""}`}
                     key={h.id}
                   >
                     <input
@@ -183,7 +183,7 @@ export function MemberGoals() {
                       }}
                     />
                     <span>
-                      {h.title}
+                      <span className="habit-title">{h.title}</span>
                       <small>
                         {day < goal.createdDate
                           ? "Before this goal started"

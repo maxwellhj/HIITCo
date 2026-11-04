@@ -1,6 +1,33 @@
+export const exerciseCategories = {
+  conditioning: "General conditioning",
+  upper: "Upper body",
+  lower: "Lower body",
+  other: "Other / untagged",
+} as const;
+export type ExerciseCategory = keyof typeof exerciseCategories;
+export function exerciseCategory(exercise: Exercise): ExerciseCategory {
+  if (exercise.category) return exercise.category;
+  const name = exercise.name.toLowerCase();
+  if (/squat|deadlift|lunge|step.?up|leg|calf|glute|hip thrust/.test(name))
+    return "lower";
+  if (
+    /press|row|curl|pull.?up|push.?up|shoulder|chest|tricep|bicep|bench|lat pull|fly|flies/.test(
+      name,
+    )
+  )
+    return "upper";
+  if (
+    /bike|ski|run|rope|burpee|sprawl|jump|plank|crunch|sit.?up|swing|sled|clean|snatch|carry|dead.?ball/.test(
+      name,
+    )
+  )
+    return "conditioning";
+  return "other";
+}
 export interface Exercise {
   id: string;
   name: string;
+  category?: ExerciseCategory;
 }
 export interface TrainingSet {
   reps: number;
@@ -138,7 +165,16 @@ export function parseTrainingLog(
       throw Error("Invalid exercise");
     ids.add(e.id);
     names.add(e.name.trim().toLowerCase());
-    return { id: e.id, name: e.name.trim() };
+    if (
+      e.category !== undefined &&
+      !Object.hasOwn(exerciseCategories, e.category)
+    )
+      throw Error("Invalid exercise category");
+    return {
+      id: e.id,
+      name: e.name.trim(),
+      ...(e.category !== undefined ? { category: e.category } : {}),
+    };
   });
   const sessionsSeen = new Set<string>();
   const sessions = log.sessions.map((s) => {

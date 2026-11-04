@@ -124,7 +124,10 @@ export function HomeHabits() {
         <p role="status">Loading your habits…</p>
       ) : habits.length ? (
         habits.map(({ goal, habit }) => (
-          <label className="habit-check" key={`${goal.id}:${habit.id}`}>
+          <label
+            className={`habit-check ${habit.completed.includes(today) ? "habit-complete" : ""}`}
+            key={`${goal.id}:${habit.id}`}
+          >
             <input
               type="checkbox"
               checked={habit.completed.includes(today)}
@@ -132,7 +135,7 @@ export function HomeHabits() {
               onChange={(e) => void toggle(goal.id, habit.id, e.target.checked)}
             />
             <span>
-              {habit.title}
+              <span className="habit-title">{habit.title}</span>
               <small>{goal.title}</small>
             </span>
           </label>

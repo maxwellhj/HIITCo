@@ -465,12 +465,6 @@ export function MemberApp({ onDemo }: { onDemo: () => void }) {
               route={logRoute}
             />
           )}
-          {(page === "home" || page === "events") && (
-            <p className="member-source small muted">
-              Workouts and events come from the club. Connect is available to
-              signed-in members.
-            </p>
-          )}
         </main>
       </div>
       <nav className="bottom-nav" aria-label="Mobile navigation">

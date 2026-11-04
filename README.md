@@ -182,3 +182,10 @@ and revision checks as Progress → Goals. Only habits scheduled for the current
 New Zealand day appear, and the feed refreshes on focus/every 30 seconds while
 visible. Home no longer includes club event prompts or the bottom events list;
 events remain available in the Events tab.
+
+Home workouts start collapsed, while today's habits remain open. Completed
+habit titles animate a strike-through and become smaller/muted (reduced-motion
+preferences disable the transition). Log supports category filters, search and
+ten exercises at a time. Category tags are saved with each exercise; untagged
+legacy movements use name-based suggestions and can be recategorised in their
+exercise details. Changing a category does not alter session history.

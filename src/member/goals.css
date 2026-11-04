@@ -158,3 +158,27 @@
   height: 100%;
   white-space: normal;
 }
+.habit-title {
+  display: inline;
+  background-image: linear-gradient(currentColor, currentColor);
+  background-position: left 55%;
+  background-repeat: no-repeat;
+  background-size: 0% 1px;
+  transition:
+    background-size 0.35s ease,
+    color 0.25s ease,
+    font-size 0.25s ease;
+}
+.habit-complete .habit-title {
+  background-size: 100% 1px;
+  color: #808891;
+  font-size: 0.9em;
+}
+.habit-complete > span > small {
+  color: #808891;
+}
+@media (prefers-reduced-motion: reduce) {
+  .habit-title {
+    transition: none;
+  }
+}

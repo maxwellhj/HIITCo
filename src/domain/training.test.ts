@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   emptyTrainingLog,
+  parseTrainingLog,
+  exerciseCategory,
   exerciseProgress,
   heaviestSet,
   sessionVolume,
@@ -133,5 +135,35 @@ describe("training input", () => {
     first.exercises[0].name = "Changed";
     expect(second.exercises[0].name).toBe("Back squat");
     expect(second.sessions).toEqual([]);
+  });
+});
+
+describe("exercise category tags", () => {
+  it("keeps tags through validation without changing training sessions", () => {
+    const log = emptyTrainingLog();
+    log.exercises[0].category = "conditioning";
+    log.sessions = [session()];
+    const restored = parseTrainingLog(log, "2026-11-05");
+    expect(restored.exercises[0].category).toBe("conditioning");
+    expect(restored.sessions).toEqual(log.sessions);
+  });
+  it("accepts legacy exercises, infers common movements and honours manual tags", () => {
+    expect(exerciseCategory({ id: "s", name: "Back squat" })).toBe("lower");
+    expect(exerciseCategory({ id: "p", name: "Bench press" })).toBe("upper");
+    expect(exerciseCategory({ id: "b", name: "Bike" })).toBe("conditioning");
+    expect(exerciseCategory({ id: "custom", name: "My move" })).toBe("other");
+    expect(exerciseCategory({ id: "b", name: "Bike", category: "lower" })).toBe(
+      "lower",
+    );
+    expect(
+      parseTrainingLog(emptyTrainingLog(), "2026-11-05").exercises,
+    ).toEqual(emptyTrainingLog().exercises);
+  });
+  it("rejects unsupported category tags", () => {
+    const log = emptyTrainingLog();
+    Object.assign(log.exercises[0], { category: "invalid" });
+    expect(() => parseTrainingLog(log, "2026-11-05")).toThrow(
+      "Invalid exercise category",
+    );
   });
 });

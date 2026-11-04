@@ -158,7 +158,7 @@ export function MemberDashboard({
       )}
       {!progress && <HomeHabits />}
       {!progress && (
-        <details className="card home-fold home-workout-fold" open>
+        <details className="card home-fold home-workout-fold">
           <summary>
             This week’s workouts
             <ChevronDown size={18} />
