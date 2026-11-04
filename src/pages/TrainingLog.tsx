@@ -238,23 +238,31 @@ export function TrainingLog({
               </form>
             </Card>
           )}
-          <label className="training-search">
-            Filter exercises
-            <select
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value as "all" | ExerciseCategory);
-                setVisibleCount(10);
-              }}
-            >
-              <option value="all">All exercises</option>
-              {Object.entries(exerciseCategories).map(([id, label]) => (
-                <option key={id} value={id}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div
+            className="exercise-filter-tabs"
+            role="group"
+            aria-label="Filter exercises"
+          >
+            {(["all", "conditioning", "upper", "lower", "other"] as const).map(
+              (id) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={category === id}
+                  onClick={() => {
+                    setCategory(id);
+                    setVisibleCount(10);
+                  }}
+                >
+                  {id === "all"
+                    ? "All"
+                    : id === "other"
+                      ? "Other"
+                      : exerciseCategories[id]}
+                </button>
+              ),
+            )}
+          </div>
           <label className="training-search">
             Find an exercise
             <input

@@ -160,6 +160,7 @@ export function MemberGoals() {
                       onChange={(e) => {
                         const checked = e.target.checked;
                         void save({
+                          ...log,
                           goals: log.goals.map((g) =>
                             g.id !== goal.id
                               ? g
@@ -228,6 +229,7 @@ export function MemberGoals() {
           onSave={async (goal) => {
             if (
               await save({
+                ...log,
                 goals: log.goals.some((g) => g.id === goal.id)
                   ? log.goals.map((g) => (g.id === goal.id ? goal : g))
                   : [...log.goals, goal],
@@ -241,6 +243,7 @@ export function MemberGoals() {
                   if (
                     confirm("Delete this goal and its habit history?") &&
                     (await save({
+                      ...log,
                       goals: log.goals.filter((g) => g.id !== editor.id),
                     }))
                   )

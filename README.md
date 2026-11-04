@@ -189,3 +189,10 @@ preferences disable the transition). Log supports category filters, search and
 ten exercises at a time. Category tags are saved with each exercise; untagged
 legacy movements use name-based suggestions and can be recategorised in their
 exercise details. Changing a category does not alter session history.
+
+The Goals announcement now uses a versioned campaign ID, so the November update
+appears for every account regardless of existing goals or previous dismissals.
+Dismissal saves `dismissedGoalsUpdate` in the encrypted goals log and is retained
+by subsequent goal/habit edits. Increment `GOALS_ANNOUNCEMENT` only for a deliberate
+new announcement. Exercise category selection is a horizontal row of small buttons
+(All by default, General conditioning, Upper body, Lower body, Other).

@@ -13,7 +13,9 @@ export interface MemberGoal {
   createdDate: string;
   habits: GoalHabit[];
 }
+export const GOALS_ANNOUNCEMENT = "goals-update-2026-11-05-v2";
 export interface GoalsLog {
+  dismissedGoalsUpdate?: string;
   goals: MemberGoal[];
 }
 export function validGoalDate(value: unknown): value is string {
@@ -36,6 +38,12 @@ export function parseGoals(value: unknown, today: string): GoalsLog {
   const data = value as GoalsLog;
   if (!data || !Array.isArray(data.goals) || data.goals.length > 50)
     throw Error("Invalid goals");
+  if (
+    data.dismissedGoalsUpdate !== undefined &&
+    (typeof data.dismissedGoalsUpdate !== "string" ||
+      data.dismissedGoalsUpdate.length > 80)
+  )
+    throw Error("Invalid announcement preference");
   const ids = new Set<string>();
   const text = (s: unknown, max: number): s is string =>
     typeof s === "string" &&

@@ -32,3 +32,33 @@
     gap: 8px;
   }
 }
+.exercise-filter-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px 1px 10px;
+  margin: 10px 0 4px;
+  scrollbar-width: thin;
+}
+.exercise-filter-tabs button {
+  flex: 0 0 auto;
+  border: 1px solid #dce1e5;
+  border-radius: 9px;
+  background: #fff;
+  color: #465461;
+  font-size: 12px;
+  line-height: 1.3;
+  padding: 9px 11px;
+  min-height: 36px;
+  margin: 0;
+  white-space: nowrap;
+}
+.exercise-filter-tabs button[aria-pressed="true"] {
+  background: #e5f1fb;
+  border-color: #98c1df;
+  color: #245b85;
+}
+.exercise-filter-tabs button:focus-visible {
+  outline: 2px solid #397eaf;
+  outline-offset: 2px;
+}
