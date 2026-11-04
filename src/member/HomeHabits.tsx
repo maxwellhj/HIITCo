@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ArrowRight, Target, ChevronDown } from "lucide-react";
 import { dateKey } from "../domain/attendance";
 import { habitScheduled, parseGoals, type GoalsLog } from "../domain/goals";
 import { memberApi, MemberApiError } from "./api";
@@ -98,57 +98,68 @@ export function HomeHabits() {
     ) ?? [];
   const totalHabits = data?.log.goals.some((g) => g.habits.length);
   return (
-    <details className="card home-fold home-habits" open>
-      <summary>
-        Today’s habits
-        <span className="small muted">
-          {data
-            ? `${habits.filter(({ habit }) => habit.completed.includes(today)).length}/${habits.length}`
-            : ""}
-        </span>
-        <ChevronDown size={18} />
-      </summary>
-      {error && (
-        <p className="error" role="alert">
-          {error}{" "}
-          <button
-            className="text-button"
-            disabled={busy}
-            onClick={() => setRetry((v) => v + 1)}
-          >
-            Refresh habits
-          </button>
-        </p>
+    <>
+      {data && !error && data.revision === 0 && data.log.goals.length === 0 && (
+        <a className="goals-intro-banner" href="#progress/goals">
+          <Target size={22} />
+          <span>Explore our new goals and habits feature here.</span>
+          <ArrowRight size={18} />
+        </a>
       )}
-      {!data && !error ? (
-        <p role="status">Loading your habits…</p>
-      ) : habits.length ? (
-        habits.map(({ goal, habit }) => (
-          <label
-            className={`habit-check ${habit.completed.includes(today) ? "habit-complete" : ""}`}
-            key={`${goal.id}:${habit.id}`}
-          >
-            <input
-              type="checkbox"
-              checked={habit.completed.includes(today)}
+      <details className="card home-fold home-habits" open>
+        <summary>
+          Today’s habits
+          <span className="small muted">
+            {data
+              ? `${habits.filter(({ habit }) => habit.completed.includes(today)).length}/${habits.length}`
+              : ""}
+          </span>
+          <ChevronDown size={18} />
+        </summary>
+        {error && (
+          <p className="error" role="alert">
+            {error}{" "}
+            <button
+              className="text-button"
               disabled={busy}
-              onChange={(e) => void toggle(goal.id, habit.id, e.target.checked)}
-            />
-            <span>
-              <span className="habit-title">{habit.title}</span>
-              <small>{goal.title}</small>
-            </span>
-          </label>
-        ))
-      ) : (
-        data && (
-          <p className="small muted">
-            {totalHabits
-              ? "No habits scheduled for today."
-              : "Add daily habits in Progress → Goals."}
+              onClick={() => setRetry((v) => v + 1)}
+            >
+              Refresh habits
+            </button>
           </p>
-        )
-      )}
-    </details>
+        )}
+        {!data && !error ? (
+          <p role="status">Loading your habits…</p>
+        ) : habits.length ? (
+          habits.map(({ goal, habit }) => (
+            <label
+              className={`habit-check ${habit.completed.includes(today) ? "habit-complete" : ""}`}
+              key={`${goal.id}:${habit.id}`}
+            >
+              <input
+                type="checkbox"
+                checked={habit.completed.includes(today)}
+                disabled={busy}
+                onChange={(e) =>
+                  void toggle(goal.id, habit.id, e.target.checked)
+                }
+              />
+              <span>
+                <span className="habit-title">{habit.title}</span>
+                <small>{goal.title}</small>
+              </span>
+            </label>
+          ))
+        ) : (
+          data && (
+            <p className="small muted">
+              {totalHabits
+                ? "No habits scheduled for today."
+                : "Add daily habits in Progress → Goals."}
+            </p>
+          )
+        )}
+      </details>
+    </>
   );
 }

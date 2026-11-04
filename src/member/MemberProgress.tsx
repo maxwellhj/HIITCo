@@ -184,7 +184,9 @@ export function TrophyRoom() {
   );
 }
 export function MemberProgress() {
-  const [tab, setTab] = useState<"strength" | "goals" | "trophies">("strength"),
+  const [tab, setTab] = useState<"strength" | "goals" | "trophies">(() =>
+      location.hash === "#progress/goals" ? "goals" : "strength",
+    ),
     [data, setData] = useState<TrainingLogData | null>(null),
     [selected, setSelected] = useState(""),
     [error, setError] = useState(""),

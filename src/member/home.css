@@ -79,3 +79,31 @@
 .member-overview > .home-fold {
   margin-bottom: 14px;
 }
+.goals-intro-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #eaf4fc;
+  border: 1px solid #98c1df;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  color: #245b85;
+  text-decoration: none;
+  box-shadow: 0 4px 12px #1729340a;
+  font-size: 14px;
+  font-weight: 500;
+}
+.goals-intro-banner > svg {
+  flex-shrink: 0;
+}
+.goals-intro-banner > svg:last-child {
+  margin-left: auto;
+}
+.goals-intro-banner:hover {
+  background: #deedf9;
+}
+.goals-intro-banner:focus-visible {
+  outline: 2px solid #397eaf;
+  outline-offset: 3px;
+}
