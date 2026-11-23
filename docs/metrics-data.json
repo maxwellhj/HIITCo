@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-29T08:27:06.505Z",
+  "updatedAt": "2026-11-23T20:26:53.680Z",
   "records": [
     {
       "weekEnding": "2025-01-03",
@@ -1092,6 +1092,54 @@
       "churn": 0.03804347826086957,
       "autopay": 184,
       "suspended": 13
+    },
+    {
+      "weekEnding": "2026-10-31",
+      "source": "26/27Dashboard",
+      "intro": 0,
+      "membershipsSold": 1,
+      "attendance": 271,
+      "visits": 1.4648648648648648,
+      "cancels": 14,
+      "churn": 0.07567567567567568,
+      "autopay": 185,
+      "suspended": 12
+    },
+    {
+      "weekEnding": "2026-11-07",
+      "source": "26/27Dashboard",
+      "intro": 0,
+      "membershipsSold": 0,
+      "attendance": 342,
+      "visits": 1.9542857142857142,
+      "cancels": 0,
+      "churn": 0,
+      "autopay": 175,
+      "suspended": 14
+    },
+    {
+      "weekEnding": "2026-11-14",
+      "source": "26/27Dashboard",
+      "intro": 1,
+      "membershipsSold": null,
+      "attendance": 334,
+      "visits": 1.941860465116279,
+      "cancels": 2,
+      "churn": 0.011627906976744186,
+      "autopay": 172,
+      "suspended": 12
+    },
+    {
+      "weekEnding": "2026-11-21",
+      "source": "26/27Dashboard",
+      "intro": 4,
+      "membershipsSold": null,
+      "attendance": 325,
+      "visits": 1.8571428571428572,
+      "cancels": 4,
+      "churn": 0.022857142857142857,
+      "autopay": 175,
+      "suspended": 14
     }
   ]
 }
